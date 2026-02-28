@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect, useCallback } from "react"
-import { Eraser, RefreshCw, ChevronRight, ChevronDown, Pencil, Check, X } from "lucide-react"
+import { ChevronRight, ChevronDown, Pencil, Check, X } from "lucide-react"
 import { Gauge } from "@/components/gauge"
 import { PageTabs } from "@/components/page-tabs"
 import { PageFooter } from "@/components/page-footer"
@@ -206,13 +206,7 @@ export default function HomePage() {
               <option>Septiembre</option><option>Octubre</option><option>Noviembre</option><option>Diciembre</option>
             </select>
           </div>
-          <button onClick={fetchData} className="text-[#9CA3AF] hover:text-[#111] transition-colors" title="Refrescar">
-            <RefreshCw className="w-[16px] h-[16px]" />
-          </button>
-          <button onClick={resetFilters} className="text-[#9CA3AF] hover:text-[#111] transition-colors" title="Limpiar filtros">
-            <Eraser className="w-[16px] h-[16px]" />
-          </button>
-          <span className="text-[10px] text-gray-400 ml-1">Actualizado: hace {minutesAgo}m</span>
+          <span className="text-[10px] text-gray-400 ml-2">Actualizado: {new Date().toLocaleDateString("es-MX", { day: "2-digit", month: "2-digit", year: "numeric" })} {new Date().toLocaleTimeString("es-MX", { hour: "2-digit", minute: "2-digit" })}</span>
         </div>
       </div>
 
