@@ -422,6 +422,31 @@ export async function globalSearch(
 }
 
 /**
+ * Fetch compromisos de venta
+ */
+export interface CompromisoRow {
+  vendedor: string; meta: number; primaActual: number; pctAvance: number
+}
+export async function getCompromisos(anio: number, mes: number): Promise<CompromisoRow[] | null> {
+  try {
+    const { data, error } = await supabase
+      .from("compromisos")
+      .select("vendedor, meta, prima_actual")
+      .eq("anio", anio)
+      .eq("mes", mes)
+      .order("meta", { ascending: false })
+    if (error || !data?.length) return null
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    return (data as any[]).map(r => ({
+      vendedor: r.vendedor,
+      meta: r.meta,
+      primaActual: r.prima_actual,
+      pctAvance: r.meta > 0 ? Math.round((r.prima_actual / r.meta) * 1000) / 10 : 0,
+    }))
+  } catch { return null }
+}
+
+/**
  * Get available periodos from dashboard_data
  */
 export async function getPeriodos(): Promise<number[] | null> {
