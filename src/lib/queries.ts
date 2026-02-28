@@ -360,6 +360,68 @@ export async function getDataFreshness(): Promise<number | null> {
 }
 
 /**
+ * Global search across vendedores, clientes, documentos, gerencias
+ */
+export interface SearchResult {
+  type: "gerencia" | "vendedor" | "cliente" | "poliza"
+  value: string
+  context: { linea: string; gerencia?: string; vendedor?: string; grupo?: string }
+  primaNeta: number
+}
+
+export async function globalSearch(
+  query: string,
+  periodo?: number,
+  año?: string
+): Promise<SearchResult[]> {
+  if (!query || query.length < 2) return []
+  try {
+    let q = supabase
+      .from("dashboard_data")
+      .select("LBussinesNombre, GerenciaNombre, VendNombre, NombreCompleto, Grupo, Documento, PrimaNeta, TCPago, Descuento, FLiquidacion")
+      .or(`GerenciaNombre.ilike.%${query}%,VendNombre.ilike.%${query}%,NombreCompleto.ilike.%${query}%,Documento.ilike.%${query}%`)
+    if (periodo) q = q.eq("Periodo", periodo)
+    if (año) q = q.ilike("FLiquidacion", `%/${año.slice(2)} %`)
+    q = q.limit(100)
+
+    const { data, error } = await q
+    if (error || !data?.length) return []
+
+    // Deduplicate by type + value
+    const seen = new Set<string>()
+    const results: SearchResult[] = []
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    for (const row of data as any[]) {
+      const linea = row.LBussinesNombre as string
+      const gerencia = row.GerenciaNombre as string
+      const vendedor = row.VendNombre as string
+      const cliente = row.NombreCompleto as string
+      const doc = row.Documento as string
+      const grupo = row.Grupo as string
+      const prima = calcPrima(row)
+
+      if (gerencia?.toLowerCase().includes(query.toLowerCase()) && !seen.has(`g:${gerencia}`)) {
+        seen.add(`g:${gerencia}`)
+        results.push({ type: "gerencia", value: gerencia, context: { linea }, primaNeta: Math.round(prima) })
+      }
+      if (vendedor?.toLowerCase().includes(query.toLowerCase()) && !seen.has(`v:${vendedor}`)) {
+        seen.add(`v:${vendedor}`)
+        results.push({ type: "vendedor", value: vendedor, context: { linea, gerencia }, primaNeta: Math.round(prima) })
+      }
+      if (cliente?.toLowerCase().includes(query.toLowerCase()) && !seen.has(`c:${cliente}`)) {
+        seen.add(`c:${cliente}`)
+        results.push({ type: "cliente", value: cliente, context: { linea, gerencia, vendedor, grupo }, primaNeta: Math.round(prima) })
+      }
+      if (doc?.toLowerCase().includes(query.toLowerCase()) && !seen.has(`d:${doc}`)) {
+        seen.add(`d:${doc}`)
+        results.push({ type: "poliza", value: doc, context: { linea, gerencia, vendedor, grupo }, primaNeta: Math.round(prima) })
+      }
+    }
+    return results.slice(0, 20)
+  } catch { return [] }
+}
+
+/**
  * Get available periodos from dashboard_data
  */
 export async function getPeriodos(): Promise<number[] | null> {

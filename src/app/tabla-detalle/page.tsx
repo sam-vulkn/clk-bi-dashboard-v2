@@ -4,7 +4,8 @@ import { useState, useEffect, useRef } from "react"
 import { ChevronRight, ChevronLeft, Search, Download, AlertTriangle } from "lucide-react"
 import { PageTabs } from "@/components/page-tabs"
 import { PageFooter } from "@/components/page-footer"
-import { getLineasNegocio, getGerencias, getVendedores, getGrupos, getClientes, getPolizas, getRankedVendedores, getRankedAseguradoras } from "@/lib/queries"
+import { getLineasNegocio, getGerencias, getVendedores, getGrupos, getClientes, getPolizas, getRankedVendedores, getRankedAseguradoras, globalSearch } from "@/lib/queries"
+import type { SearchResult } from "@/lib/queries"
 import type { PolizaRow } from "@/lib/queries"
 import { exportExcel, exportPDF } from "@/lib/export"
 
@@ -55,6 +56,41 @@ export default function TablaDetallePage() {
   const [lineas, setLineas] = useState<LineaFull[]>(SEED)
   const [rows, setRows] = useState<SimpleRow[]>([])
   const [polizas, setPolizas] = useState<PolizaRow[]>([])
+
+  // Global search
+  const [searchResults, setSearchResults] = useState<SearchResult[]>([])
+  const [showSearchDropdown, setShowSearchDropdown] = useState(false)
+  const searchTimeout = useRef<NodeJS.Timeout>(null)
+
+  const handleSearchChange = (val: string) => {
+    setSearch(val)
+    if (searchTimeout.current) clearTimeout(searchTimeout.current)
+    if (val.length >= 2) {
+      searchTimeout.current = setTimeout(async () => {
+        const results = await globalSearch(val, periodo, year)
+        setSearchResults(results)
+        setShowSearchDropdown(results.length > 0)
+      }, 300)
+    } else {
+      setSearchResults([])
+      setShowSearchDropdown(false)
+    }
+  }
+
+  const navigateToResult = (r: SearchResult) => {
+    setShowSearchDropdown(false)
+    setSearch("")
+    const { linea, gerencia, vendedor, grupo } = r.context
+    if (r.type === "gerencia") {
+      drill("gerencia", linea, { linea })
+    } else if (r.type === "vendedor" && gerencia) {
+      drill("vendedor", gerencia, { linea, gerencia })
+    } else if (r.type === "cliente" && gerencia && vendedor && grupo) {
+      drill("cliente", grupo, { linea, gerencia, vendedor, grupo })
+    } else if (r.type === "poliza" && gerencia && vendedor && grupo) {
+      drill("cliente", grupo, { linea, gerencia, vendedor, grupo })
+    }
+  }
 
   // Rankings
   const [topVendedores, setTopVendedores] = useState<{ vendedor: string; primaNeta: number }[]>([])
@@ -332,7 +368,34 @@ export default function TablaDetallePage() {
         </div>
         <div className="relative ml-auto">
           <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" />
-          <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Buscar..." className="pl-7 pr-3 py-1 border border-[#E5E7EB] rounded text-xs w-44 bg-white" />
+          <input
+            value={search}
+            onChange={e => handleSearchChange(e.target.value)}
+            onFocus={() => searchResults.length > 0 && setShowSearchDropdown(true)}
+            onBlur={() => setTimeout(() => setShowSearchDropdown(false), 200)}
+            placeholder="Buscar gerencia, vendedor, póliza..."
+            className="pl-7 pr-3 py-1 border border-[#E5E7EB] rounded text-xs w-56 bg-white"
+          />
+          {showSearchDropdown && searchResults.length > 0 && (
+            <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-[#E5E7E9] rounded shadow-lg z-50 max-h-60 overflow-y-auto">
+              {searchResults.map((r, i) => (
+                <button
+                  key={`${r.type}-${r.value}-${i}`}
+                  className="w-full text-left px-3 py-2 text-xs hover:bg-[#FFF5F5] border-b border-[#F0F0F0] last:border-0"
+                  onMouseDown={() => navigateToResult(r)}
+                >
+                  <span className={`inline-block w-16 text-[9px] font-bold uppercase rounded px-1 py-0.5 mr-2 ${
+                    r.type === "gerencia" ? "bg-[#041224] text-white" :
+                    r.type === "vendedor" ? "bg-[#FDECEA] text-[#041224]" :
+                    r.type === "poliza" ? "bg-[#E5E7E9] text-[#333]" :
+                    "bg-[#F1F8F1] text-[#2E7D32]"
+                  }`}>{r.type}</span>
+                  <span className="text-[#111] font-medium">{r.value}</span>
+                  <span className="text-[#CCD1D3] ml-2 text-[9px]">{r.context.linea}</span>
+                </button>
+              ))}
+            </div>
+          )}
         </div>
         <span className="text-xs text-[#CCD1D3]">Actualizado: {new Date().toLocaleDateString("es-MX", { day: "2-digit", month: "2-digit", year: "numeric" })}</span>
       </div>
