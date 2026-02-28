@@ -164,6 +164,8 @@ export default function HomePage() {
 
   const animCumplimiento = useCountUp(displayCumplimiento, 900)
   const animCrecimiento = useCountUp(displayCrecimiento, 700)
+  const animDolar = useCountUp(fx.usd, 1200)
+  const animPeso = useCountUp(fx.dop, 1000)
 
   const rawGaugeVal = selected
     ? Math.round((lineas.find(l => l.nombre === selected)?.primaNeta ?? total) / 1e6 * 10) / 10
@@ -252,9 +254,9 @@ export default function HomePage() {
                         <td className="px-2 py-1.5">
                           <button
                             onClick={e => { e.stopPropagation(); toggleLinea(l.nombre) }}
-                            className="text-gray-400 hover:text-[#111] transition-colors"
+                            className="text-[#E62800] hover:text-[#041224] transition-colors cursor-pointer"
                           >
-                            {isExpanded ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronRight className="w-3.5 h-3.5" />}
+                            {isExpanded ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
                           </button>
                         </td>
                         <td className="px-2 py-1.5 font-medium text-[#111] text-[10px]">{l.nombre}</td>
@@ -350,8 +352,8 @@ export default function HomePage() {
         <div className="bg-white rounded-lg shadow-sm p-4 border border-[#E5E7E9]">
           <p className="text-[10px] text-[#CCD1D3] uppercase font-bold tracking-wide">Tipo de cambio</p>
           <div className="mt-2 space-y-1">
-            <p className="text-sm text-[#041224]">Dólar <strong>${fx.usd}</strong></p>
-            <p className="text-sm text-[#041224]">Peso Dom. <strong>${fx.dop}</strong></p>
+            <p className="text-sm text-[#041224]">Dólar <strong>${animDolar.toFixed(2)}</strong></p>
+            <p className="text-sm text-[#041224]">Peso Dom. <strong>${animPeso.toFixed(2)}</strong></p>
           </div>
         </div>
       </div>
