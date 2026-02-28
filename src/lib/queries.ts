@@ -343,6 +343,23 @@ export async function getRankedAseguradoras(
 }
 
 /**
+ * Check data freshness — returns hours since last tipo_cambio update
+ */
+export async function getDataFreshness(): Promise<number | null> {
+  try {
+    const { data, error } = await supabase
+      .from("tipo_cambio")
+      .select("fecha_actualizacion")
+      .order("fecha_actualizacion", { ascending: false })
+      .limit(1)
+    if (error || !data?.length) return null
+    const lastUpdate = new Date(data[0].fecha_actualizacion)
+    const hoursAgo = (Date.now() - lastUpdate.getTime()) / (1000 * 60 * 60)
+    return Math.round(hoursAgo * 10) / 10
+  } catch { return null }
+}
+
+/**
  * Get available periodos from dashboard_data
  */
 export async function getPeriodos(): Promise<number[] | null> {

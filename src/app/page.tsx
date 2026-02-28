@@ -14,6 +14,7 @@ import {
   getGerencias,
   getVendedores,
   getTipoCambio,
+  getDataFreshness,
 } from "@/lib/queries"
 import type { FxRates } from "@/lib/queries"
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, ResponsiveContainer, LabelList, Cell } from "recharts"
@@ -88,6 +89,7 @@ export default function HomePage() {
   const [isRealData, setIsRealData] = useState(false)
   // lastRefresh removed — static timestamp per Suzanne
   const [selected, setSelected] = useState<string | null>(null)
+  const [staleHours, setStaleHours] = useState<number | null>(null)
 
   // Accordion state
   const [expanded, setExpanded] = useState<Record<string, boolean>>({})
@@ -120,6 +122,7 @@ export default function HomePage() {
 
   useEffect(() => { fetchData() }, [fetchData])
   useEffect(() => { getTipoCambio().then(r => { if (r) setFx(r); setFxLoading(false) }).catch(() => setFxLoading(false)) }, [])
+  useEffect(() => { getDataFreshness().then(h => setStaleHours(h)) }, [])
 
   // Timeout fallback — never stay loading
   useEffect(() => {
@@ -219,6 +222,9 @@ export default function HomePage() {
             </select>
           </div>
           <span className="text-[10px] text-gray-400 ml-2">Actualizado: {new Date().toLocaleDateString("es-MX", { day: "2-digit", month: "2-digit", year: "numeric" })} {new Date().toLocaleTimeString("es-MX", { hour: "2-digit", minute: "2-digit" })}</span>
+          {staleHours !== null && staleHours > 6 && (
+            <span className="text-[10px] bg-orange-100 text-orange-700 px-2 py-0.5 rounded-full font-medium ml-1">⚠ Datos desactualizados</span>
+          )}
         </div>
       </div>
 
