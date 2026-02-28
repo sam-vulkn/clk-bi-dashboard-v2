@@ -10,32 +10,29 @@ interface GaugeProps {
 
 export function Gauge({ value, prevYear = 88.9, budget = 129.5 }: GaugeProps) {
   const [animatedAngle, setAnimatedAngle] = useState(-90)
-  const startTime = useRef(0)
   const rafRef = useRef(0)
 
-  // Dynamic range: always show value within arc
   const min = 0
-  const maxVal = Math.max(budget * 1.1, value * 1.2, prevYear * 1.3)
-  const max = Math.ceil(maxVal / 5) * 5 // Round up to nearest 5
+  const maxVal = Math.max(budget * 1.08, value * 1.15, prevYear * 1.2)
+  const max = Math.ceil(maxVal / 5) * 5
 
-  const cx = 200, cy = 180
-  const rOuter = 160, rInner = 115
+  // Full-width SVG centered
+  const cx = 250, cy = 210
+  const rOuter = 185, rInner = 130
 
   const valueToAngle = (v: number) => {
     const clamped = Math.max(min, Math.min(max, v))
-    const pct = (clamped - min) / (max - min)
-    return -90 + pct * 180
+    return -90 + ((clamped - min) / (max - min)) * 180
   }
 
   const targetAngle = valueToAngle(value)
 
   useEffect(() => {
-    const duration = 1400
+    const duration = 1200
+    const start = performance.now()
     const startAngle = -90
-    startTime.current = performance.now()
     const tick = (now: number) => {
-      const elapsed = now - startTime.current
-      const t = Math.min(elapsed / duration, 1)
+      const t = Math.min((now - start) / duration, 1)
       const eased = 1 - Math.pow(1 - t, 3)
       setAnimatedAngle(startAngle + (targetAngle - startAngle) * eased)
       if (t < 1) rafRef.current = requestAnimationFrame(tick)
@@ -44,111 +41,105 @@ export function Gauge({ value, prevYear = 88.9, budget = 129.5 }: GaugeProps) {
     return () => cancelAnimationFrame(rafRef.current)
   }, [targetAngle])
 
-  const prevYearAngle = ((prevYear - min) / (max - min)) * 180
-  const budgetAngle = ((budget - min) / (max - min)) * 180
+  const pyAngle = ((prevYear - min) / (max - min)) * 180
+  const budAngle = ((budget - min) / (max - min)) * 180
 
   const zones = [
-    { start: 0, end: prevYearAngle, color: "#E62800" },
-    { start: prevYearAngle, end: budgetAngle, color: "#F5C518" },
-    { start: budgetAngle, end: 180, color: "#2E7D32" },
+    { start: 0, end: pyAngle, color: "#DC2626" },
+    { start: pyAngle, end: budAngle, color: "#EAB308" },
+    { start: budAngle, end: 180, color: "#16A34A" },
   ]
 
-  const arcPath = (startDeg: number, endDeg: number, rOut: number, rIn: number) => {
-    const toRad = (d: number) => (d * Math.PI) / 180
-    const sRad = toRad(startDeg - 90)
-    const eRad = toRad(endDeg - 90)
-    const x1o = cx + rOut * Math.cos(sRad), y1o = cy + rOut * Math.sin(sRad)
-    const x2o = cx + rOut * Math.cos(eRad), y2o = cy + rOut * Math.sin(eRad)
-    const x1i = cx + rIn * Math.cos(eRad), y1i = cy + rIn * Math.sin(eRad)
-    const x2i = cx + rIn * Math.cos(sRad), y2i = cy + rIn * Math.sin(sRad)
-    const large = endDeg - startDeg > 180 ? 1 : 0
-    return `M${x1o},${y1o} A${rOut},${rOut} 0 ${large} 1 ${x2o},${y2o} L${x1i},${y1i} A${rIn},${rIn} 0 ${large} 0 ${x2i},${y2i} Z`
+  const arc = (s: number, e: number, ro: number, ri: number) => {
+    const r = (d: number) => ((d - 90) * Math.PI) / 180
+    const sr = r(s), er = r(e)
+    const x1 = cx + ro * Math.cos(sr), y1 = cy + ro * Math.sin(sr)
+    const x2 = cx + ro * Math.cos(er), y2 = cy + ro * Math.sin(er)
+    const x3 = cx + ri * Math.cos(er), y3 = cy + ri * Math.sin(er)
+    const x4 = cx + ri * Math.cos(sr), y4 = cy + ri * Math.sin(sr)
+    const lg = e - s > 180 ? 1 : 0
+    return `M${x1},${y1} A${ro},${ro} 0 ${lg} 1 ${x2},${y2} L${x3},${y3} A${ri},${ri} 0 ${lg} 0 ${x4},${y4} Z`
   }
 
-  const needleLength = rOuter - 8
+  // Needle
+  const nLen = rOuter - 5
   const nRad = ((animatedAngle - 90) * Math.PI) / 180
-  const tipX = cx + needleLength * Math.cos(nRad)
-  const tipY = cy + needleLength * Math.sin(nRad)
-  const perpRad = nRad + Math.PI / 2
-  const bw = 3
-  const b1x = cx + bw * Math.cos(perpRad), b1y = cy + bw * Math.sin(perpRad)
-  const b2x = cx - bw * Math.cos(perpRad), b2y = cy - bw * Math.sin(perpRad)
+  const tipX = cx + nLen * Math.cos(nRad), tipY = cy + nLen * Math.sin(nRad)
+  const pRad = nRad + Math.PI / 2, bw = 3.5
+  const b1x = cx + bw * Math.cos(pRad), b1y = cy + bw * Math.sin(pRad)
+  const b2x = cx - bw * Math.cos(pRad), b2y = cy - bw * Math.sin(pRad)
 
-  // Zone boundary markers
-  const markers = [
-    { val: prevYear, label: `$${prevYear}M`, sublabel: "Año ant.", color: "#E62800" },
-    { val: budget, label: `$${budget}M`, sublabel: "Meta", color: "#2E7D32" },
-  ]
-
-  // Min/Max labels
-  const minLabel = `$${min}M`
-  const maxLabel = `$${max}M`
+  // Zone boundary tick marks
+  const tick = (val: number, label: string, sublabel: string, col: string) => {
+    const pct = (val - min) / (max - min)
+    const deg = pct * 180
+    const rad = ((deg - 90) * Math.PI) / 180
+    const x1 = cx + (rOuter + 1) * Math.cos(rad), y1 = cy + (rOuter + 1) * Math.sin(rad)
+    const x2 = cx + (rInner - 1) * Math.cos(rad), y2 = cy + (rInner - 1) * Math.sin(rad)
+    // Label outside
+    const lr = rOuter + 22
+    const lx = cx + lr * Math.cos(rad), ly = cy + lr * Math.sin(rad)
+    return (
+      <g key={label}>
+        <line x1={x1} y1={y1} x2={x2} y2={y2} stroke="white" strokeWidth="2.5" />
+        <text x={lx} y={ly - 4} fontSize="10" fill={col} textAnchor="middle" fontWeight="800" fontFamily="Lato">{label}</text>
+        <text x={lx} y={ly + 7} fontSize="7" fill="#AAA" textAnchor="middle">{sublabel}</text>
+      </g>
+    )
+  }
 
   return (
-    <div className="w-full flex flex-col items-center">
-      <svg viewBox="0 0 400 220" className="w-full max-w-[320px]" style={{ overflow: "visible" }}>
-        <defs>
-          <filter id="needleShadow">
-            <feDropShadow dx="1" dy="1" stdDeviation="1.5" floodOpacity="0.25" />
-          </filter>
-          <filter id="arcShadow">
-            <feDropShadow dx="0" dy="2" stdDeviation="3" floodOpacity="0.15" />
-          </filter>
-        </defs>
+    <svg viewBox="0 0 500 265" className="w-full" preserveAspectRatio="xMidYMid meet">
+      <defs>
+        <filter id="ns"><feDropShadow dx="1" dy="1" stdDeviation="2" floodOpacity="0.2" /></filter>
+        <filter id="glow"><feGaussianBlur stdDeviation="2" result="coloredBlur"/><feMerge><feMergeNode in="coloredBlur"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+      </defs>
 
-        {/* Background arc shadow */}
-        <path d={arcPath(0, 180, rOuter + 2, rInner - 2)} fill="#E5E7E9" filter="url(#arcShadow)" />
+      {/* Background */}
+      <path d={arc(0, 180, rOuter + 3, rInner - 3)} fill="#EAEAEA" />
 
-        {/* 3 Zone arcs */}
-        {zones.map((z, i) => (
-          <path key={i} d={arcPath(z.start, z.end, rOuter, rInner)} fill={z.color} opacity={0.9} />
-        ))}
+      {/* Zone arcs */}
+      {zones.map((z, i) => <path key={i} d={arc(z.start, z.end, rOuter, rInner)} fill={z.color} />)}
 
-        {/* Zone boundary markers */}
-        {markers.map((m, i) => {
-          const pct = (m.val - min) / (max - min)
-          const deg = pct * 180
+      {/* Zone labels inside arc */}
+      {(() => {
+        const midRed = (0 + pyAngle) / 2
+        const midYel = (pyAngle + budAngle) / 2
+        const midGrn = (budAngle + 180) / 2
+        const midR = (rOuter + rInner) / 2
+        const pos = (deg: number) => {
           const rad = ((deg - 90) * Math.PI) / 180
-          const x1 = cx + (rOuter + 2) * Math.cos(rad), y1 = cy + (rOuter + 2) * Math.sin(rad)
-          const x2 = cx + (rInner - 2) * Math.cos(rad), y2 = cy + (rInner - 2) * Math.sin(rad)
-          const labelR = rOuter + 18
-          const lx = cx + labelR * Math.cos(rad), ly = cy + labelR * Math.sin(rad)
-          return (
-            <g key={`marker-${i}`}>
-              <line x1={x1} y1={y1} x2={x2} y2={y2} stroke="white" strokeWidth="2.5" />
-              <text x={lx} y={ly - 5} fontSize="8" fill={m.color} textAnchor="middle" dominantBaseline="middle" fontWeight="700">
-                {m.label}
-              </text>
-              <text x={lx} y={ly + 5} fontSize="6" fill="#999" textAnchor="middle" dominantBaseline="middle">
-                {m.sublabel}
-              </text>
-            </g>
-          )
-        })}
+          return { x: cx + midR * Math.cos(rad), y: cy + midR * Math.sin(rad) }
+        }
+        return (
+          <>
+            {pyAngle > 25 && <text {...pos(midRed)} fontSize="8" fill="white" textAnchor="middle" dominantBaseline="middle" fontWeight="700" opacity="0.8">BAJO</text>}
+            {(budAngle - pyAngle) > 20 && <text {...pos(midYel)} fontSize="8" fill="#333" textAnchor="middle" dominantBaseline="middle" fontWeight="700" opacity="0.7">META</text>}
+            {(180 - budAngle) > 15 && <text {...pos(midGrn)} fontSize="8" fill="white" textAnchor="middle" dominantBaseline="middle" fontWeight="700" opacity="0.8">SUPER</text>}
+          </>
+        )
+      })()}
 
-        {/* Min/Max labels */}
-        <text x={cx - rOuter - 5} y={cy + 12} fontSize="8" fill="#CCC" textAnchor="end">{minLabel}</text>
-        <text x={cx + rOuter + 5} y={cy + 12} fontSize="8" fill="#CCC" textAnchor="start">{maxLabel}</text>
+      {/* Boundary ticks */}
+      {tick(prevYear, `$${prevYear}M`, "Año ant.", "#DC2626")}
+      {tick(budget, `$${budget}M`, "Meta", "#16A34A")}
 
-        {/* Needle */}
-        <polygon
-          points={`${tipX},${tipY} ${b1x},${b1y} ${b2x},${b2y}`}
-          fill="#1A1A1A"
-          filter="url(#needleShadow)"
-        />
+      {/* Min / Max */}
+      <text x={cx - rOuter - 8} y={cy + 14} fontSize="8" fill="#CCC" textAnchor="end">$0</text>
+      <text x={cx + rOuter + 8} y={cy + 14} fontSize="8" fill="#CCC" textAnchor="start">${max}M</text>
 
-        {/* Pivot */}
-        <circle cx={cx} cy={cy} r={10} fill="#333" />
-        <circle cx={cx} cy={cy} r={4} fill="#666" />
+      {/* Needle */}
+      <polygon points={`${tipX},${tipY} ${b1x},${b1y} ${b2x},${b2y}`} fill="#1A1A1A" filter="url(#ns)" />
+      <circle cx={cx} cy={cy} r={9} fill="#444" />
+      <circle cx={cx} cy={cy} r={3.5} fill="#888" />
 
-        {/* Center value — big and bold INSIDE the arc */}
-        <text x={cx} y={cy - 20} fontSize="36" fill="#041224" textAnchor="middle" fontWeight="900" fontFamily="Lato, sans-serif">
-          ${value < 1000 ? value.toFixed(1) : Math.round(value)}M
-        </text>
-        <text x={cx} y={cy - 2} fontSize="10" fill="#999" textAnchor="middle">
-          de ${budget}M presupuesto
-        </text>
-      </svg>
-    </div>
+      {/* Center value */}
+      <text x={cx} y={cy - 30} fontSize="42" fill="#041224" textAnchor="middle" fontWeight="900" fontFamily="Lato, sans-serif">
+        ${value < 1000 ? value.toFixed(1) : Math.round(value)}M
+      </text>
+      <text x={cx} y={cy - 10} fontSize="11" fill="#999" textAnchor="middle" fontFamily="Lato">
+        de ${budget}M presupuesto
+      </text>
+    </svg>
   )
 }
