@@ -163,6 +163,49 @@ export async function getTipoCambio(): Promise<FxRates | null> {
 }
 
 /**
+ * Fetch grupos for a given vendedor + gerencia + línea
+ */
+export async function getGrupos(
+  vendedor: string,
+  gerencia: string,
+  linea: string,
+  periodo?: number,
+  año?: string
+): Promise<{ grupo: string; cliente: string; primaNeta: number }[] | null> {
+  try {
+    let query = supabase
+      .from("dashboard_data")
+      .select("Grupo, NombreCompleto, PrimaNeta, TCPago, Descuento, FLiquidacion")
+      .eq("VendNombre", vendedor)
+      .eq("GerenciaNombre", gerencia)
+      .eq("LBussinesNombre", linea)
+
+    if (periodo) query = query.eq("Periodo", periodo)
+    if (año) query = query.ilike("FLiquidacion", `%/${año.slice(2)} %`)
+
+    const { data, error } = await query
+    if (error || !data?.length) return null
+
+    // Group by Grupo, keep first NombreCompleto
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const rows = data as any[]
+    const grouped: Record<string, { cliente: string; prima: number }> = {}
+    for (const row of rows) {
+      const g = (row.Grupo as string) || "Sin grupo"
+      const c = (row.NombreCompleto as string) || ""
+      if (!grouped[g]) grouped[g] = { cliente: c, prima: 0 }
+      grouped[g].prima += calcPrima(row)
+    }
+
+    return Object.entries(grouped)
+      .map(([grupo, d]) => ({ grupo, cliente: d.cliente, primaNeta: Math.round(d.prima) }))
+      .sort((a, b) => b.primaNeta - a.primaNeta)
+  } catch {
+    return null
+  }
+}
+
+/**
  * Get available periodos from dashboard_data
  */
 export async function getPeriodos(): Promise<number[] | null> {
