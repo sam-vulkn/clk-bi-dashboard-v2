@@ -11,12 +11,15 @@ function fmt(v: number) {
 }
 
 function Semaforo({ pct }: { pct: number }) {
-  const color = pct >= 90 ? "#2E7D32" : pct >= 70 ? "#F5C518" : "#E62800"
-  const label = pct >= 90 ? "✅" : pct >= 70 ? "🟡" : "🔴"
+  // Single traffic light — 3 stacked circles, active one is bright
+  const isGreen = pct >= 90
+  const isYellow = pct >= 70 && pct < 90
+  const isRed = pct < 70
   return (
-    <span className="inline-flex items-center gap-1">
-      <span className="w-3 h-3 rounded-full inline-block" style={{ backgroundColor: color }} />
-      <span className="text-[9px]">{label}</span>
+    <span className="inline-flex items-center gap-0.5">
+      <span className={`w-3.5 h-3.5 rounded-full inline-block border ${isRed ? "bg-[#E62800] border-[#B91C00] shadow-[0_0_4px_#E62800]" : "bg-[#E62800]/15 border-[#E5E7E9]"}`} />
+      <span className={`w-3.5 h-3.5 rounded-full inline-block border ${isYellow ? "bg-[#F5C518] border-[#D4A800] shadow-[0_0_4px_#F5C518]" : "bg-[#F5C518]/15 border-[#E5E7E9]"}`} />
+      <span className={`w-3.5 h-3.5 rounded-full inline-block border ${isGreen ? "bg-[#2E7D32] border-[#1B5E20] shadow-[0_0_4px_#2E7D32]" : "bg-[#2E7D32]/15 border-[#E5E7E9]"}`} />
     </span>
   )
 }

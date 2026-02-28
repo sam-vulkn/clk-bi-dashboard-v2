@@ -1,23 +1,17 @@
 "use client"
 
 import { useState } from "react"
-import { Menu, X, Home, Table2, Handshake, CalendarDays, Clock } from "lucide-react"
+import { Menu, X } from "lucide-react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-
-const NAV_ITEMS = [
-  { href: "/", label: "Home", icon: Home },
-  { href: "/tabla-detalle", label: "Tabla Detalle", icon: Table2 },
-  { href: "/compromisos", label: "Compromisos", icon: Handshake },
-  { href: "/cobranza-dia", label: "Cobranza por día", icon: CalendarDays },
-  { href: "/cobranza-pendiente", label: "Cobranza pendiente", icon: Clock },
-]
 
 export function Sidebar() {
   const [open, setOpen] = useState(false)
   const pathname = usePathname()
 
   if (pathname === "/login") return null
+
+  const isActive = (href: string) => pathname === href
 
   return (
     <>
@@ -30,7 +24,7 @@ export function Sidebar() {
       {open && <div className="fixed inset-0 bg-black/50 z-30 lg:hidden" onClick={() => setOpen(false)} />}
 
       <aside
-        className={`fixed top-0 left-0 h-full bg-[#F5F5F5] flex flex-col z-40 transition-transform lg:translate-x-0 ${open ? "translate-x-0" : "-translate-x-full"}`}
+        className={`fixed top-0 left-0 h-full bg-[#F5F5F5] flex flex-col z-40 transition-transform lg:translate-x-0 ${open ? "translate-x-0" : "-translate-x-full"} border-r border-[#E5E7E9]`}
         style={{ width: 160, minWidth: 160, maxWidth: 160 }}
       >
         {/* Logo */}
@@ -40,28 +34,54 @@ export function Sidebar() {
           </div>
         </div>
 
-        {/* Navigation */}
-        <nav className="flex flex-col gap-0.5 p-2 mt-2">
-          {NAV_ITEMS.map((item) => {
-            const active = pathname === item.href
-            const Icon = item.icon
-            return (
-              <Link
-                key={item.href}
-                href={item.href}
-                onClick={() => setOpen(false)}
-                className={`flex items-center gap-2 px-3 py-2.5 rounded-md text-[12px] font-medium no-underline transition-all duration-150 ${
-                  active
-                    ? "bg-white text-[#041224] border-l-[3px] border-l-[#E62800] shadow-sm font-bold"
-                    : "text-[#666] hover:bg-white hover:text-[#041224] border-l-[3px] border-l-transparent"
-                }`}
-              >
-                <Icon className="w-4 h-4 flex-shrink-0" />
-                <span className="leading-tight">{item.label}</span>
-              </Link>
-            )
-          })}
-        </nav>
+        {/* Grupo Click block — main nav */}
+        <Link
+          href="/"
+          onClick={() => setOpen(false)}
+          className={`mx-3 mt-4 rounded-lg text-center py-5 px-3 font-bold text-sm no-underline transition-all duration-200 ${
+            isActive("/") || isActive("/tabla-detalle") || isActive("/compromisos") || isActive("/corporate") || isActive("/internacional")
+              ? "bg-[#041224] text-white shadow-md"
+              : "bg-[#041224]/80 text-white/90 hover:bg-[#041224]"
+          }`}
+        >
+          Grupo Click
+        </Link>
+
+        {/* Cobranza buttons — coral style */}
+        <div className="flex flex-col gap-2 mx-3 mt-3">
+          <Link
+            href="/cobranza-dia"
+            onClick={() => setOpen(false)}
+            className={`rounded-lg text-center py-3 px-3 text-xs font-semibold no-underline transition-all duration-200 ${
+              isActive("/cobranza-dia")
+                ? "bg-[#FEE2E2] text-[#E62800] shadow-sm border border-[#E62800]/20"
+                : "bg-[#FEE2E2]/60 text-[#041224] hover:bg-[#FEE2E2] hover:text-[#E62800]"
+            }`}
+          >
+            Cobranza por día
+          </Link>
+          <Link
+            href="/cobranza-pendiente"
+            onClick={() => setOpen(false)}
+            className={`rounded-lg text-center py-3 px-3 text-xs font-semibold no-underline transition-all duration-200 ${
+              isActive("/cobranza-pendiente")
+                ? "bg-[#FEE2E2] text-[#E62800] shadow-sm border border-[#E62800]/20"
+                : "bg-[#FEE2E2]/60 text-[#041224] hover:bg-[#FEE2E2] hover:text-[#E62800]"
+            }`}
+          >
+            Cobranza pendiente
+          </Link>
+        </div>
+
+        {/* Spacer */}
+        <div className="flex-1" />
+
+        {/* Subtle footer */}
+        <div className="px-3 pb-3">
+          <div className="text-[8px] text-[#CCD1D3] text-center leading-tight">
+            CLK BI Dashboard<br />v1.0
+          </div>
+        </div>
       </aside>
     </>
   )
