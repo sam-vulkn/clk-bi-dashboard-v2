@@ -15,8 +15,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <AuthProvider>
           <div className="flex min-h-screen">
             <Sidebar />
-            <main className="flex-1 lg:ml-64 min-h-screen bg-clk-bg">
-              <div className="p-6 lg:p-8 max-w-7xl mx-auto">{children}</div>
+            <main className="flex-1 lg:ml-[90px] min-h-screen bg-[#F0F0F0]">
+              <div className="p-5 lg:p-6 max-w-[1400px] mx-auto">{children}</div>
             </main>
           </div>
         </AuthProvider>

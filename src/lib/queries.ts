@@ -1,0 +1,184 @@
+import { supabase } from "./supabase"
+
+// ============================================================
+// PRIMARY SOURCE: public.dashboard_data (10,566 rows)
+// Columns: LBussinesNombre, GerenciaNombre, VendNombre,
+// PrimaNeta, Descuento (text), TCPago, FLiquidacion (text),
+// CiaAbreviacion, Grupo, NombreCompleto, Documento,
+// RamosNombre, Sub_Ramo, DeptosNombre, Periodo (1-12)
+// ============================================================
+
+export interface LineaRow {
+  nombre: string
+  primaNeta: number
+  anioAnterior: number
+  presupuesto: number
+}
+
+// Seed data — fallback when Supabase fails
+export const SEED_LINEAS: LineaRow[] = [
+  { nombre: "Click Franquicias", primaNeta: 52577939, anioAnterior: 45038829, presupuesto: 68989976 },
+  { nombre: "Click Promotoras", primaNeta: 20017383, anioAnterior: 19422359, presupuesto: 25534211 },
+  { nombre: "Corporate", primaNeta: 12708705, anioAnterior: 13539625, presupuesto: 16242717 },
+  { nombre: "Cartera Tradicional", primaNeta: 10632028, anioAnterior: 10057425, presupuesto: 12322087 },
+  { nombre: "Call Center", primaNeta: 2602364, anioAnterior: 853685, presupuesto: 6398081 },
+]
+
+export const SEED_PRESUPUESTO = 129487071
+
+export interface FxRates { usd: number; dop: number }
+export const SEED_FX: FxRates = { usd: 17.22, dop: 56.85 }
+
+// Helper: compute prima from a row
+function calcPrima(row: Record<string, unknown>): number {
+  const prima = (row.PrimaNeta as number) || 0
+  const tc = (row.TCPago as number) || 1
+  const desc = parseFloat(row.Descuento as string) || 0
+  return prima * tc - desc
+}
+
+// Helper: group rows by a key and sum prima
+function groupBySum(rows: Record<string, unknown>[], key: string): Record<string, number> {
+  const grouped: Record<string, number> = {}
+  for (const row of rows) {
+    const k = (row[key] as string) || "Sin clasificar"
+    grouped[k] = (grouped[k] || 0) + calcPrima(row)
+  }
+  return grouped
+}
+
+/**
+ * Fetch prima neta cobrada grouped by línea de negocio from dashboard_data
+ * Periodo 1-12 maps to payment periods in the data
+ */
+export async function getLineasNegocio(periodo?: number, año?: string): Promise<{ linea: string; primaNeta: number }[] | null> {
+  try {
+    let query = supabase
+      .from("dashboard_data")
+      .select("LBussinesNombre, PrimaNeta, TCPago, Descuento, FLiquidacion")
+
+    if (periodo) query = query.eq("Periodo", periodo)
+    if (año) query = query.ilike("FLiquidacion", `%/${año.slice(2)} %`)
+
+    const { data, error } = await query
+    if (error || !data?.length) return null
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const grouped = groupBySum(data as any[], "LBussinesNombre")
+
+    return Object.entries(grouped)
+      .map(([linea, prima]) => ({ linea, primaNeta: Math.round(prima) }))
+      .sort((a, b) => b.primaNeta - a.primaNeta)
+  } catch {
+    return null
+  }
+}
+
+/**
+ * Fetch gerencias for a given línea de negocio
+ */
+export async function getGerencias(
+  linea: string,
+  periodo?: number,
+  año?: string
+): Promise<{ gerencia: string; primaNeta: number }[] | null> {
+  try {
+    let query = supabase
+      .from("dashboard_data")
+      .select("GerenciaNombre, PrimaNeta, TCPago, Descuento, FLiquidacion")
+      .eq("LBussinesNombre", linea)
+
+    if (periodo) query = query.eq("Periodo", periodo)
+    if (año) query = query.ilike("FLiquidacion", `%/${año.slice(2)} %`)
+
+    const { data, error } = await query
+    if (error || !data?.length) return null
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const grouped = groupBySum(data as any[], "GerenciaNombre")
+
+    return Object.entries(grouped)
+      .map(([gerencia, prima]) => ({ gerencia, primaNeta: Math.round(prima) }))
+      .sort((a, b) => b.primaNeta - a.primaNeta)
+  } catch {
+    return null
+  }
+}
+
+/**
+ * Fetch vendedores for a given gerencia + línea
+ */
+export async function getVendedores(
+  gerencia: string,
+  linea: string,
+  periodo?: number,
+  año?: string
+): Promise<{ vendedor: string; primaNeta: number }[] | null> {
+  try {
+    let query = supabase
+      .from("dashboard_data")
+      .select("VendNombre, PrimaNeta, TCPago, Descuento, FLiquidacion")
+      .eq("GerenciaNombre", gerencia)
+      .eq("LBussinesNombre", linea)
+
+    if (periodo) query = query.eq("Periodo", periodo)
+    if (año) query = query.ilike("FLiquidacion", `%/${año.slice(2)} %`)
+
+    const { data, error } = await query
+    if (error || !data?.length) return null
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const grouped = groupBySum(data as any[], "VendNombre")
+
+    return Object.entries(grouped)
+      .map(([vendedor, prima]) => ({ vendedor, primaNeta: Math.round(prima) }))
+      .sort((a, b) => b.primaNeta - a.primaNeta)
+  } catch {
+    return null
+  }
+}
+
+/**
+ * Fetch exchange rates from bi_dashboard.dim_tipo_cambio
+ */
+export async function getTipoCambio(): Promise<FxRates | null> {
+  try {
+    const { data, error } = await supabase
+      .schema("bi_dashboard")
+      .from("dim_tipo_cambio")
+      .select("*")
+      .order("fecha", { ascending: false })
+      .limit(2)
+
+    if (error || !data?.length) return null
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const rows = data as any[]
+    const usd = rows.find((r: Record<string, unknown>) => r.moneda === "USD")?.valor
+    const dop = rows.find((r: Record<string, unknown>) => r.moneda === "DOP")?.valor
+    return { usd: usd ?? 17.22, dop: dop ?? 56.85 }
+  } catch {
+    return null
+  }
+}
+
+/**
+ * Get available periodos from dashboard_data
+ */
+export async function getPeriodos(): Promise<number[] | null> {
+  try {
+    const { data, error } = await supabase
+      .from("dashboard_data")
+      .select("Periodo")
+
+    if (error || !data?.length) return null
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const set = new Set<number>()
+    for (const r of data as any[]) { set.add(r.Periodo as number) }
+    const unique = Array.from(set).sort((a, b) => a - b)
+    return unique
+  } catch {
+    return null
+  }
+}

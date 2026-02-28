@@ -6,13 +6,15 @@ const config: Config = {
     extend: {
       colors: {
         clk: {
-          dark: "#041224",
-          red: "#E62800",
+          dark: "#0D1117",
+          red: "#C00000",
+          green: "#375623",
+          yellow: "#B8860B",
           bg: "#F6F9FE",
-          text: "#353535",
-          "gray-light": "#E5E7E9",
+          text: "#111111",
+          "gray-light": "#E5E7EB",
           "gray-medium": "#CCD1D3",
-          yellow: "#F9B233",
+          "card-border": "#E5E7EB",
         },
       },
       fontFamily: {
