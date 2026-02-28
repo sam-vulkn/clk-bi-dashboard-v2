@@ -71,7 +71,7 @@ function PctBadge({ val, base }: { val: number; base: number }) {
   const neg = p < 0
   return (
     <td className="px-2 py-2 text-right">
-      <span className={`inline-block px-1.5 py-0.5 rounded text-[10px] font-bold ${neg ? "bg-[#FEE2E2] text-[#E62800]" : "bg-[#DCFCE7] text-[#1a7a1a]"}`}>
+      <span className={`inline-block px-1.5 py-0.5 rounded text-[10px] font-bold ${neg ? "bg-[#FEE2E2] text-[#991B1B]" : "bg-[#DCFCE7] text-[#166534]"}`}>
         {neg ? "" : "+"}{p.toFixed(1)}%
       </span>
     </td>
@@ -127,7 +127,7 @@ export default function CobranzaPage() {
         {/* Card 2 — Acumulado */}
         <div className="bg-white rounded-lg shadow-sm p-5 border border-[#E5E7E9] flex flex-col">
           <p className="text-[#CCD1D3] text-[10px] font-bold uppercase tracking-wider mb-3">Acumulado</p>
-          <DonutChart value={94.5} objetivo={90} color="#041224" size={130} />
+          <DonutChart value={94.5} objetivo={90} color="#E62800" size={130} />
           <div className="mt-3 space-y-1">
             <p className="text-[#E62800] text-sm font-bold">+5.05% vs 2025</p>
             <div className="flex justify-between text-xs text-[#041224]">

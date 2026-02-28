@@ -347,12 +347,11 @@ export default function HomePage() {
           </p>
         </div>
         {/* Tipo de cambio */}
-        <div className="bg-white rounded shadow-sm p-4 border border-[#E5E7E9]">
-          <p className="text-[#CCD1D3] text-[10px] uppercase tracking-wide font-bold">Tipo de cambio</p>
-          <div className="flex items-center gap-3 mt-2">
-            <span className="text-[#041224] text-sm">Dólar <strong>${fx.usd}</strong></span>
-            <span className="text-[#CCD1D3]">|</span>
-            <span className="text-[#041224] text-sm">Peso Dom. <strong>${fx.dop}</strong></span>
+        <div className="bg-white rounded-lg shadow-sm p-4 border border-[#E5E7E9]">
+          <p className="text-[10px] text-[#CCD1D3] uppercase font-bold tracking-wide">Tipo de cambio</p>
+          <div className="mt-2 space-y-1">
+            <p className="text-sm text-[#041224]">Dólar <strong>${fx.usd}</strong></p>
+            <p className="text-sm text-[#041224]">Peso Dom. <strong>${fx.dop}</strong></p>
           </div>
         </div>
       </div>

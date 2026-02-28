@@ -17,93 +17,57 @@ export function Cylinder({ value, maxValue, pct, objective }: CylinderProps) {
     return () => clearTimeout(timer)
   }, [pct])
 
-  const w = 90
-  const h = 200
-  const rx = 45
-  const ry = 16
-  const left = 80
-  const top = 20
-  const bot = top + h
+  const w = 90, h = 200, rx = 45, ry = 16
+  const left = 80, top = 20, bot = top + h
   const fillH = (fillPct / 100) * h
   const fillTop = bot - fillH
 
-  // Scale values on the right
   const scaleValues = [2585.64, 2100.83, 1616.02, 1131.22, 646.41]
-
-  const fmtM = (v: number) => {
-    if (v >= 1000) return `${(v).toFixed(2)}M`
-    return `${v.toFixed(2)}M`
-  }
-
+  const fmtM = (v: number) => `${v.toFixed(2)}M`
   const diff = pct - objective
 
   return (
-    <svg viewBox="0 0 300 280" className="w-full max-w-[300px]">
-      {/* Cylinder body - empty */}
-      <rect x={left} y={top} width={w} height={h} fill="#E5E7EB" />
-
-      {/* Cylinder body - filled with green gradient */}
+    <svg viewBox="0 0 300 280" className="w-full max-w-[260px]">
       <defs>
-        <linearGradient id="greenGrad" x1="0" x2="1" y1="0" y2="0">
-          <stop offset="0%" stopColor="#1B5E20" />
-          <stop offset="50%" stopColor="#4CAF50" />
-          <stop offset="100%" stopColor="#1B5E20" />
+        <linearGradient id="brandGrad" x1="0" x2="1" y1="0" y2="0">
+          <stop offset="0%" stopColor="#041224" />
+          <stop offset="50%" stopColor="#0a2540" />
+          <stop offset="100%" stopColor="#041224" />
         </linearGradient>
       </defs>
-      <rect
-        x={left}
-        y={fillTop}
-        width={w}
-        height={fillH}
-        fill="url(#greenGrad)"
-        className="transition-all duration-[1200ms] ease-out"
-      />
+
+      {/* Cylinder body - empty */}
+      <rect x={left} y={top} width={w} height={h} fill="#E5E7E9" />
+
+      {/* Cylinder body - filled with brand gradient */}
+      <rect x={left} y={fillTop} width={w} height={fillH}
+        fill="url(#brandGrad)" className="transition-all duration-[1200ms] ease-out" />
 
       {/* Bottom ellipse */}
-      <ellipse cx={left + rx} cy={bot} rx={rx} ry={ry} fill="#1B5E20" />
+      <ellipse cx={left + rx} cy={bot} rx={rx} ry={ry} fill="#041224" />
 
       {/* Top of fill ellipse */}
       {fillPct > 0 && fillPct < 100 && (
-        <ellipse
-          cx={left + rx}
-          cy={fillTop}
-          rx={rx}
-          ry={ry}
-          fill="#5BA0E0"
-          className="transition-all duration-[1200ms] ease-out"
-        />
+        <ellipse cx={left + rx} cy={fillTop} rx={rx} ry={ry}
+          fill="#E62800" className="transition-all duration-[1200ms] ease-out" />
       )}
 
       {/* Top cap */}
-      <ellipse cx={left + rx} cy={top} rx={rx} ry={ry} fill="#D1D5DB" stroke="#bbb" strokeWidth={0.5} />
+      <ellipse cx={left + rx} cy={top} rx={rx} ry={ry} fill="#CCD1D3" stroke="#bbb" strokeWidth={0.5} />
 
       {/* Side edges */}
       <line x1={left} y1={top} x2={left} y2={bot} stroke="#bbb" strokeWidth={0.5} />
       <line x1={left + w} y1={top} x2={left + w} y2={bot} stroke="#bbb" strokeWidth={0.5} />
 
-      {/* Red dashed line at current level */}
-      <line
-        x1={left - 8}
-        y1={fillTop}
-        x2={left + w + 8}
-        y2={fillTop}
-        stroke="#C00000"
-        strokeWidth={1.5}
-        strokeDasharray="4 2"
-        className="transition-all duration-[1200ms] ease-out"
-      />
+      {/* Red dashed objective line */}
+      <line x1={left - 8} y1={fillTop} x2={left + w + 8} y2={fillTop}
+        stroke="#E62800" strokeWidth={1.5} strokeDasharray="4 2"
+        className="transition-all duration-[1200ms] ease-out" />
 
       {/* Value centered in cylinder */}
-      <text
-        x={left + rx}
-        y={fillTop + fillH / 2 + 4}
-        textAnchor="middle"
-        fill="white"
-        fontSize="14"
-        fontWeight="bold"
-        fontFamily="Lato, system-ui"
-        className="transition-all duration-[1200ms]"
-      >
+      <text x={left + rx} y={fillTop + fillH / 2 + 4} textAnchor="middle"
+        fill="white" fontSize="14" fontWeight="bold" fontFamily="Lato, system-ui"
+        className="transition-all duration-[1200ms]">
         {fmtM(value / 1e6)}
       </text>
 
@@ -112,24 +76,22 @@ export function Cylinder({ value, maxValue, pct, objective }: CylinderProps) {
         const y = top + (h / (scaleValues.length - 1)) * i
         return (
           <g key={i}>
-            <line x1={left + w + 4} y1={y} x2={left + w + 10} y2={y} stroke="#999" strokeWidth={0.5} />
-            <text x={left + w + 14} y={y + 3} fontSize="8" fill="#999" fontFamily="system-ui">
-              {sv.toFixed(2)}M
-            </text>
+            <line x1={left + w + 4} y1={y} x2={left + w + 10} y2={y} stroke="#CCD1D3" strokeWidth={0.5} />
+            <text x={left + w + 14} y={y + 3} fontSize="8" fill="#CCD1D3" fontFamily="Lato">{sv.toFixed(2)}M</text>
           </g>
         )
       })}
 
-      {/* Percentage + arrow to the right */}
-      <text x={left + w + 14} y={fillTop - 8} fontSize="16" fontWeight="bold" fill="#375623" fontFamily="Lato">
+      {/* Percentage */}
+      <text x={left + w + 14} y={fillTop - 8} fontSize="16" fontWeight="bold" fill="#E62800" fontFamily="Lato">
         ↑ {pct.toFixed(1)}%
       </text>
-      <text x={left + w + 14} y={fillTop + 8} fontSize="9" fill="#888" fontFamily="system-ui">
+      <text x={left + w + 14} y={fillTop + 8} fontSize="9" fill="#CCD1D3" fontFamily="Lato">
         Obj: {objective}% ({diff >= 0 ? "+" : ""}{diff.toFixed(2)}%)
       </text>
 
       {/* Label */}
-      <text x={left + rx} y={bot + 32} textAnchor="middle" fontSize="10" fontWeight="bold" fill="#111" fontFamily="Lato">
+      <text x={left + rx} y={bot + 32} textAnchor="middle" fontSize="10" fontWeight="bold" fill="#041224" fontFamily="Lato">
         META ANUAL
       </text>
     </svg>
