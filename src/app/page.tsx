@@ -82,7 +82,8 @@ export default function HomePage() {
   useEffect(() => { document.title = "Tacómetro | CLK BI Dashboard" }, [])
   const [month, setMonth] = useState("Febrero")
   const [lineas, setLineas] = useState<DisplayLinea[]>(SEED_LINEAS.map(l => ({ nombre: l.nombre, primaNeta: l.primaNeta, presupuesto: l.presupuesto, anioAnterior: l.anioAnterior })))
-  const [fx, setFx] = useState<FxRates>(SEED_FX)
+  const [fx, setFx] = useState<FxRates & { fechaActualizacion?: string }>(SEED_FX)
+  const [fxLoading, setFxLoading] = useState(true)
   const [loading, setLoading] = useState(true)
   const [isRealData, setIsRealData] = useState(false)
   // lastRefresh removed — static timestamp per Suzanne
@@ -118,7 +119,7 @@ export default function HomePage() {
   }, [periodo, year])
 
   useEffect(() => { fetchData() }, [fetchData])
-  useEffect(() => { getTipoCambio().then(r => { if (r) setFx(r) }) }, [])
+  useEffect(() => { getTipoCambio().then(r => { if (r) setFx(r); setFxLoading(false) }).catch(() => setFxLoading(false)) }, [])
 
   // Timeout fallback — never stay loading
   useEffect(() => {
@@ -353,10 +354,19 @@ export default function HomePage() {
         {/* Tipo de cambio */}
         <div className="bg-white rounded-lg shadow-sm p-4 border border-[#E5E7E9]">
           <p className="text-[10px] text-[#CCD1D3] uppercase font-bold tracking-wide">Tipo de cambio</p>
-          <div className="mt-2 space-y-1">
-            <p className="text-sm text-[#041224]">Dólar <strong>${animDolar.toFixed(2)}</strong></p>
-            <p className="text-sm text-[#041224]">Peso Dom. <strong>${animPeso.toFixed(2)}</strong></p>
-          </div>
+          {fxLoading ? (
+            <p className="text-sm text-[#CCD1D3] mt-2 animate-pulse">Actualizando...</p>
+          ) : (
+            <div className="mt-2 space-y-1">
+              <p className="text-sm text-[#041224]">Dólar <strong>${animDolar.toFixed(2)}</strong></p>
+              <p className="text-sm text-[#041224]">Peso Dom. <strong>${animPeso.toFixed(2)}</strong></p>
+              {fx.fechaActualizacion && (
+                <p className="text-[9px] text-[#CCD1D3] mt-1">
+                  {new Date(fx.fechaActualizacion).toLocaleString("es-MX", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })}
+                </p>
+              )}
+            </div>
+          )}
         </div>
       </div>
 

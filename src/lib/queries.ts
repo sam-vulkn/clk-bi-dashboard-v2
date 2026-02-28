@@ -30,11 +30,12 @@ export interface FxRates { usd: number; dop: number }
 export const SEED_FX: FxRates = { usd: 17.22, dop: 56.85 }
 
 // Helper: compute prima from a row
+// Fórmula oficial: (Prima Neta cobrada - descuento) × Tipo de cambio
 function calcPrima(row: Record<string, unknown>): number {
   const prima = (row.PrimaNeta as number) || 0
   const tc = (row.TCPago as number) || 1
   const desc = parseFloat(row.Descuento as string) || 0
-  return prima * tc - desc
+  return (prima - desc) * tc
 }
 
 // Helper: group rows by a key and sum prima
@@ -139,24 +140,25 @@ export async function getVendedores(
 }
 
 /**
- * Fetch exchange rates from bi_dashboard.dim_tipo_cambio
+ * Fetch exchange rates from public.tipo_cambio (real-time from edge function)
  */
-export async function getTipoCambio(): Promise<FxRates | null> {
+export async function getTipoCambio(): Promise<FxRates & { fechaActualizacion?: string } | null> {
   try {
     const { data, error } = await supabase
-      .schema("bi_dashboard")
-      .from("dim_tipo_cambio")
-      .select("*")
-      .order("fecha", { ascending: false })
-      .limit(2)
+      .from("tipo_cambio")
+      .select("moneda, valor, fecha_actualizacion")
 
     if (error || !data?.length) return null
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const rows = data as any[]
-    const usd = rows.find((r: Record<string, unknown>) => r.moneda === "USD")?.valor
-    const dop = rows.find((r: Record<string, unknown>) => r.moneda === "DOP")?.valor
-    return { usd: usd ?? 17.22, dop: dop ?? 56.85 }
+    const usdRow = rows.find((r: Record<string, unknown>) => r.moneda === "USD")
+    const dopRow = rows.find((r: Record<string, unknown>) => r.moneda === "DOP")
+    return {
+      usd: usdRow?.valor ?? 17.22,
+      dop: dopRow?.valor ?? 56.85,
+      fechaActualizacion: usdRow?.fecha_actualizacion,
+    }
   } catch {
     return null
   }
