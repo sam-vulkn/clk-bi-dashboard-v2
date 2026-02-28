@@ -15,6 +15,7 @@ import {
   getVendedores,
   getTipoCambio,
   getDataFreshness,
+  getLastDataDate,
 } from "@/lib/queries"
 import type { FxRates } from "@/lib/queries"
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, ResponsiveContainer, LabelList, Cell } from "recharts"
@@ -90,6 +91,7 @@ export default function HomePage() {
   // lastRefresh removed — static timestamp per Suzanne
   const [selected, setSelected] = useState<string | null>(null)
   const [staleHours, setStaleHours] = useState<number | null>(null)
+  const [lastDataDate, setLastDataDate] = useState<string | null>(null)
 
   // Accordion state
   const [expanded, setExpanded] = useState<Record<string, boolean>>({})
@@ -123,6 +125,7 @@ export default function HomePage() {
   useEffect(() => { fetchData() }, [fetchData])
   useEffect(() => { getTipoCambio().then(r => { if (r) setFx(r); setFxLoading(false) }).catch(() => setFxLoading(false)) }, [])
   useEffect(() => { getDataFreshness().then(h => setStaleHours(h)) }, [])
+  useEffect(() => { getLastDataDate().then(d => setLastDataDate(d)) }, [])
 
   // Timeout fallback — never stay loading
   useEffect(() => {
@@ -221,10 +224,14 @@ export default function HomePage() {
               <option>Septiembre</option><option>Octubre</option><option>Noviembre</option><option>Diciembre</option>
             </select>
           </div>
-          <span className="text-[10px] text-gray-400 ml-2">Actualizado: {new Date().toLocaleDateString("es-MX", { day: "2-digit", month: "2-digit", year: "numeric" })} {new Date().toLocaleTimeString("es-MX", { hour: "2-digit", minute: "2-digit" })}</span>
-          {staleHours !== null && staleHours > 6 && (
-            <span className="text-[10px] bg-orange-100 text-orange-700 px-2 py-0.5 rounded-full font-medium ml-1">⚠ Datos desactualizados</span>
-          )}
+          <span className="text-[10px] text-gray-400 ml-2">Datos al: {lastDataDate ?? new Date().toLocaleDateString("es-MX", { day: "2-digit", month: "2-digit", year: "numeric" })}</span>
+          {(() => {
+            if (!lastDataDate) return null
+            const parts = lastDataDate.split("/")
+            const dataDate = new Date(parseInt(parts[2]), parseInt(parts[1]) - 1, parseInt(parts[0]))
+            const daysDiff = Math.floor((Date.now() - dataDate.getTime()) / (1000 * 60 * 60 * 24))
+            return daysDiff > 7 ? <span className="text-[10px] bg-orange-100 text-orange-700 px-2 py-0.5 rounded-full font-medium ml-1">⚠ Datos pendientes de actualización</span> : null
+          })()}
         </div>
       </div>
 
@@ -237,6 +244,9 @@ export default function HomePage() {
               <Gauge value={gaugeVal} prevYear={gaugePrevYear} budget={gaugeBudget} />
               <div className={`text-center text-[12px] font-semibold mt-1 ${forecastMeetsBudget ? "text-[#2E7D32]" : "text-[#E62800]"}`}>
                 Proyección al cierre: ${forecastM}M
+              </div>
+              <div className="text-center text-[9px] text-gray-400 mt-0.5">
+                Proyección lineal basada en días del mes
               </div>
             </div>
           </div>
@@ -358,29 +368,37 @@ export default function HomePage() {
 
       {/* Bottom: 3 KPI cards + Bar chart */}
       <div className="grid grid-cols-3 gap-3 mt-3 flex-shrink-0">
-        {/* Card 76% */}
-        <div className="bg-white rounded shadow-sm p-4 border-l-4 border-[#E62800]">
-          <p className="text-[#CCD1D3] text-[10px] uppercase tracking-wide font-bold">Cumplimiento del presupuesto</p>
-          <p className="text-[#E62800] text-[46px] font-black leading-none mt-1">{Math.round(animCumplimiento)}%</p>
-        </div>
-        {/* Card 10.8% */}
-        <div className="bg-[#041224] rounded shadow-sm p-4">
-          <p className="text-[#CCD1D3] text-[10px] uppercase tracking-wide font-bold">Crecimiento vs año anterior *</p>
+        {/* Card Cumplimiento — semantic colors */}
+        {(() => {
+          const pct = Math.round(animCumplimiento)
+          const bg = pct >= 90 ? "bg-[#2E7D32]" : pct >= 70 ? "bg-[#F5C518]" : "bg-[#E62800]"
+          const text = pct >= 90 ? "text-white" : pct >= 70 ? "text-[#041224]" : "text-white"
+          const subText = pct >= 90 ? "text-white/70" : pct >= 70 ? "text-[#041224]/60" : "text-white/70"
+          return (
+            <div className={`${bg} rounded shadow-sm p-4`}>
+              <p className={`${subText} text-[10px] uppercase tracking-wide font-bold`}>Cumplimiento del presupuesto</p>
+              <p className={`${text} text-[46px] font-black leading-none mt-1`}>{pct}%</p>
+            </div>
+          )
+        })()}
+        {/* Card Crecimiento — green if positive, red if negative */}
+        <div className={`${displayCrecimiento >= 0 ? "bg-[#2E7D32]" : "bg-[#E62800]"} rounded shadow-sm p-4`}>
+          <p className="text-white/70 text-[10px] uppercase tracking-wide font-bold">Crecimiento vs año anterior *</p>
           <p className="text-white text-[46px] font-black leading-none mt-1">
             {displayCrecimiento >= 0 ? "↑" : "↓"} {Math.abs(animCrecimiento).toFixed(1)}%
           </p>
         </div>
-        {/* Tipo de cambio */}
-        <div className="bg-white rounded-lg shadow-sm p-4 border border-[#E5E7E9]">
-          <p className="text-[10px] text-[#CCD1D3] uppercase font-bold tracking-wide">Tipo de cambio</p>
+        {/* Tipo de cambio — smaller, reference data */}
+        <div className="bg-[#FAFAFA] rounded shadow-sm p-3 border border-[#E5E7E9] flex flex-col justify-center">
+          <p className="text-[9px] text-[#999] uppercase font-bold tracking-wide">Tipo de cambio (ref.)</p>
           {fxLoading ? (
-            <p className="text-sm text-[#CCD1D3] mt-2 animate-pulse">Actualizando...</p>
+            <p className="text-xs text-[#CCD1D3] mt-1 animate-pulse">Actualizando...</p>
           ) : (
-            <div className="mt-2 space-y-1">
-              <p className="text-sm text-[#041224]">Dólar <strong>${animDolar.toFixed(2)}</strong></p>
-              <p className="text-sm text-[#041224]">Peso Dom. <strong>${animPeso.toFixed(2)}</strong></p>
+            <div className="mt-1 space-y-0.5">
+              <p className="text-xs text-[#666]">USD <strong className="text-[#041224]">${animDolar.toFixed(2)}</strong></p>
+              <p className="text-xs text-[#666]">DOP <strong className="text-[#041224]">${animPeso.toFixed(2)}</strong></p>
               {fx.fechaActualizacion && (
-                <p className="text-[9px] text-[#CCD1D3] mt-1">
+                <p className="text-[8px] text-[#BBB] mt-0.5">
                   {new Date(fx.fechaActualizacion).toLocaleString("es-MX", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })}
                 </p>
               )}
@@ -399,7 +417,7 @@ export default function HomePage() {
               <div className="w-2.5 h-2.5 bg-[#111] rounded-sm" />
               <span className="text-[10px] text-gray-500 font-medium">PN efectuada</span>
             </div>
-            {!isRealData && (
+            {chartData.some(d => d.ppto > 0) && (
               <div className="flex items-center gap-1">
                 <div className="w-2.5 h-2.5 bg-[#D1D5DB] rounded-sm" />
                 <span className="text-[10px] text-gray-500 font-medium">Presupuesto</span>
@@ -443,7 +461,7 @@ export default function HomePage() {
                 ))}
                 <LabelList dataKey="pn" position="right" formatter={(v: unknown) => `$${Math.round(Number(v))}M`} fontSize={10} fill="#666" />
               </Bar>
-              {!isRealData && (
+              {chartData.some(d => d.ppto > 0) && (
                 <Bar dataKey="ppto" fill="#D1D5DB" radius={[0, 2, 2, 0]}>
                   <LabelList dataKey="ppto" position="right" formatter={(v: unknown) => `$${Math.round(Number(v))}M`} fontSize={10} fill="#999" />
                 </Bar>

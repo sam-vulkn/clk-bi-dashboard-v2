@@ -366,6 +366,42 @@ export async function getRankedAseguradoras(
 }
 
 /**
+ * Get the last data date from dashboard_data (MAX FLiquidacion)
+ */
+export async function getLastDataDate(): Promise<string | null> {
+  try {
+    const { data, error } = await supabase
+      .from("dashboard_data")
+      .select("FLiquidacion")
+      .order("FLiquidacion", { ascending: false })
+      .limit(50)
+    if (error || !data?.length) return null
+    // FLiquidacion is text like "DD/MM/YY HH:MM" — find the max date
+    let maxDate: Date | null = null
+    let maxStr = ""
+    for (const row of data) {
+      const raw = (row as Record<string, unknown>).FLiquidacion as string
+      if (!raw) continue
+      // Parse DD/MM/YY or DD/MM/YYYY
+      const parts = raw.trim().split(/[\s]+/)[0].split("/")
+      if (parts.length >= 3) {
+        const day = parseInt(parts[0]), month = parseInt(parts[1])
+        let yr = parseInt(parts[2])
+        if (yr < 100) yr += 2000
+        const d = new Date(yr, month - 1, day)
+        if (!maxDate || d > maxDate) { maxDate = d; maxStr = raw }
+      }
+    }
+    if (!maxDate) return null
+    // Return as DD/MM/YYYY
+    const dd = String(maxDate.getDate()).padStart(2, "0")
+    const mm = String(maxDate.getMonth() + 1).padStart(2, "0")
+    const yyyy = maxDate.getFullYear()
+    return `${dd}/${mm}/${yyyy}`
+  } catch { return null }
+}
+
+/**
  * Check data freshness — returns hours since last tipo_cambio update
  */
 export async function getDataFreshness(): Promise<number | null> {

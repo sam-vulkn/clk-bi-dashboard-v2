@@ -1,9 +1,17 @@
 "use client"
 
 import { useState } from "react"
-import { Menu, X } from "lucide-react"
+import { Menu, X, Home, Table2, Handshake, CalendarDays, Clock } from "lucide-react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
+
+const NAV_ITEMS = [
+  { href: "/", label: "Home", icon: Home },
+  { href: "/tabla-detalle", label: "Tabla Detalle", icon: Table2 },
+  { href: "/compromisos", label: "Compromisos", icon: Handshake },
+  { href: "/cobranza-dia", label: "Cobranza por día", icon: CalendarDays },
+  { href: "/cobranza-pendiente", label: "Cobranza pendiente", icon: Clock },
+]
 
 export function Sidebar() {
   const [open, setOpen] = useState(false)
@@ -25,36 +33,35 @@ export function Sidebar() {
         className={`fixed top-0 left-0 h-full bg-[#F5F5F5] flex flex-col z-40 transition-transform lg:translate-x-0 ${open ? "translate-x-0" : "-translate-x-full"}`}
         style={{ width: 160, minWidth: 160, maxWidth: 160 }}
       >
-        {/* Logo — fondo blanco */}
+        {/* Logo */}
         <div className="bg-white px-4 py-3 border-b border-[#E5E7E9] flex items-center justify-center">
           <div className="text-[#E62800] font-black text-sm tracking-tight" style={{ height: 28, lineHeight: "28px" }}>
             Click<span className="text-[#041224]">SEGUROS</span>
           </div>
         </div>
 
-        {/* Grupo Click — azul marino */}
-        <Link
-          href="/"
-          className="bg-[#041224] text-white font-bold text-sm px-4 py-7 text-center block italic no-underline hover:bg-[#0a1e38] transition-colors"
-        >
-          Grupo Click
-        </Link>
-
-        {/* Cobranza links — rosa pálido */}
-        <div className="p-2 flex flex-col gap-1.5">
-          <Link
-            href="/cobranza-dia"
-            className={`block bg-[#FEE2E2] text-[#041224] font-bold text-[13px] py-3 px-4 rounded-md text-center no-underline hover:bg-[#FECACA] transition-colors ${pathname === "/cobranza-dia" ? "ring-2 ring-[#E62800]" : ""}`}
-          >
-            Cobranza por día
-          </Link>
-          <Link
-            href="/cobranza-pendiente"
-            className={`block bg-[#FEE2E2] text-[#041224] font-bold text-[13px] py-3 px-4 rounded-md text-center no-underline hover:bg-[#FECACA] transition-colors ${pathname === "/cobranza-pendiente" ? "ring-2 ring-[#E62800]" : ""}`}
-          >
-            Cobranza pendiente
-          </Link>
-        </div>
+        {/* Navigation */}
+        <nav className="flex flex-col gap-0.5 p-2 mt-2">
+          {NAV_ITEMS.map((item) => {
+            const active = pathname === item.href
+            const Icon = item.icon
+            return (
+              <Link
+                key={item.href}
+                href={item.href}
+                onClick={() => setOpen(false)}
+                className={`flex items-center gap-2 px-3 py-2.5 rounded-md text-[12px] font-medium no-underline transition-all duration-150 ${
+                  active
+                    ? "bg-white text-[#041224] border-l-[3px] border-l-[#E62800] shadow-sm font-bold"
+                    : "text-[#666] hover:bg-white hover:text-[#041224] border-l-[3px] border-l-transparent"
+                }`}
+              >
+                <Icon className="w-4 h-4 flex-shrink-0" />
+                <span className="leading-tight">{item.label}</span>
+              </Link>
+            )
+          })}
+        </nav>
       </aside>
     </>
   )

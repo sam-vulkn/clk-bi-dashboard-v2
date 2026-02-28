@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from "react"
 import { ChevronRight, ChevronLeft, Search, Download, AlertTriangle } from "lucide-react"
 import { PageTabs } from "@/components/page-tabs"
 import { PageFooter } from "@/components/page-footer"
-import { getLineasNegocio, getGerencias, getVendedores, getGrupos, getClientes, getPolizas, getRankedVendedores, getRankedAseguradoras, globalSearch } from "@/lib/queries"
+import { getLineasNegocio, getGerencias, getVendedores, getGrupos, getClientes, getPolizas, getRankedVendedores, getRankedAseguradoras, globalSearch, getLastDataDate } from "@/lib/queries"
 import type { SearchResult } from "@/lib/queries"
 import type { PolizaRow } from "@/lib/queries"
 import { exportExcel, exportPDF } from "@/lib/export"
@@ -37,8 +37,8 @@ type DrillLevel = "linea" | "gerencia" | "vendedor" | "grupo" | "cliente" | "pol
 
 interface Crumb { level: DrillLevel; label: string }
 
-// Simple row for levels 2-5 (name + primaNeta)
-interface SimpleRow { name: string; primaNeta: number }
+// Full row for all drill levels (9 columns)
+interface DrillRow { name: string; primaNeta: number; presupuesto: number | null; diferencia: number | null; pctDifPpto: number | null; pnAnioAnt: number | null; difYoY: number | null; pctDifYoY: number | null; pendiente: number | null }
 
 export default function TablaDetallePage() {
   const [year, setYear] = useState("2026")
@@ -55,8 +55,9 @@ export default function TablaDetallePage() {
 
   // Data
   const [lineas, setLineas] = useState<LineaFull[]>(SEED)
-  const [rows, setRows] = useState<SimpleRow[]>([])
+  const [rows, setRows] = useState<DrillRow[]>([])
   const [polizas, setPolizas] = useState<PolizaRow[]>([])
+  const [lastDataDate, setLastDataDate] = useState<string | null>(null)
 
   // Global search
   const [searchResults, setSearchResults] = useState<SearchResult[]>([])
@@ -100,6 +101,7 @@ export default function TablaDetallePage() {
 
   const tableRef = useRef<HTMLDivElement>(null)
   useEffect(() => { document.title = "Tabla detalle | CLK BI Dashboard" }, [])
+  useEffect(() => { getLastDataDate().then(d => setLastDataDate(d)) }, [])
   const periodo = MESES[month] ?? 2
 
   // Load líneas
@@ -145,19 +147,23 @@ export default function TablaDetallePage() {
     setSel(newSel)
     setCrumbs(prev => [...prev, { level: drillLevel, label }])
 
+    const toRow = (name: string, primaNeta: number): DrillRow => ({
+      name, primaNeta, presupuesto: null, diferencia: null, pctDifPpto: null, pnAnioAnt: null, difYoY: null, pctDifYoY: null, pendiente: null
+    })
+
     try {
       if (level === "gerencia") {
         const data = await getGerencias(newSel.linea!, periodo, year)
-        setRows((data ?? []).map(d => ({ name: d.gerencia, primaNeta: d.primaNeta })))
+        setRows((data ?? []).map(d => toRow(d.gerencia, d.primaNeta)))
       } else if (level === "vendedor") {
         const data = await getVendedores(newSel.gerencia!, newSel.linea!, periodo, year)
-        setRows((data ?? []).map(d => ({ name: d.vendedor, primaNeta: d.primaNeta })))
+        setRows((data ?? []).map(d => toRow(d.vendedor, d.primaNeta)))
       } else if (level === "grupo") {
         const data = await getGrupos(newSel.vendedor!, newSel.gerencia!, newSel.linea!, periodo, year)
-        setRows((data ?? []).map(d => ({ name: d.grupo, primaNeta: d.primaNeta })))
+        setRows((data ?? []).map(d => toRow(d.grupo, d.primaNeta)))
       } else if (level === "cliente") {
         const data = await getClientes(newSel.grupo!, newSel.vendedor!, newSel.gerencia!, newSel.linea!, periodo, year)
-        setRows((data ?? []).map(d => ({ name: d.cliente, primaNeta: d.primaNeta })))
+        setRows((data ?? []).map(d => toRow(d.cliente, d.primaNeta)))
       } else if (level === "poliza") {
         const data = await getPolizas(newSel.cliente!, newSel.grupo!, newSel.vendedor!, newSel.gerencia!, newSel.linea!, periodo, year)
         setPolizas(data ?? [])
@@ -281,9 +287,9 @@ export default function TablaDetallePage() {
       )
     } else {
       exportExcel(
-        filteredRows.map(r => ({ [levelName]: r.name, "Prima neta": r.primaNeta })),
-        [levelName, "Prima neta"],
-        [levelName, "Prima neta"],
+        filteredRows.map(r => ({ [levelName]: r.name, "Prima neta": r.primaNeta, "Presupuesto": r.presupuesto ?? "—", "Diferencia": r.diferencia ?? "—", "% Dif ppto": r.pctDifPpto ?? "—", "PN año anterior": r.pnAnioAnt ?? "—", "Dif PN año ant": r.difYoY ?? "—", "% Dif PN AA": r.pctDifYoY ?? "—", "Pendiente": r.pendiente ?? "—" })),
+        [levelName, "Prima neta", "Presupuesto", "Diferencia", "% Dif ppto", "PN año anterior", "Dif PN año ant", "% Dif PN AA", "Pendiente"],
+        [levelName, "Prima neta", "Presupuesto", "Diferencia", "% Dif ppto", "PN año anterior", "Dif PN año ant", "% Dif PN AA", "Pendiente"],
         filename
       )
     }
@@ -398,7 +404,14 @@ export default function TablaDetallePage() {
             </div>
           )}
         </div>
-        <span className="text-xs text-[#CCD1D3]">Actualizado: {new Date().toLocaleDateString("es-MX", { day: "2-digit", month: "2-digit", year: "numeric" })}</span>
+        <span className="text-xs text-[#CCD1D3]">Datos al: {lastDataDate ?? new Date().toLocaleDateString("es-MX", { day: "2-digit", month: "2-digit", year: "numeric" })}</span>
+        {(() => {
+          if (!lastDataDate) return null
+          const parts = lastDataDate.split("/")
+          const dataDate = new Date(parseInt(parts[2]), parseInt(parts[1]) - 1, parseInt(parts[0]))
+          const daysDiff = Math.floor((Date.now() - dataDate.getTime()) / (1000 * 60 * 60 * 24))
+          return daysDiff > 7 ? <span className="text-[10px] bg-orange-100 text-orange-700 px-2 py-0.5 rounded-full font-medium ml-1">⚠ Datos pendientes de actualización</span> : null
+        })()}
       </div>
 
       {/* Table */}
@@ -433,6 +446,13 @@ export default function TablaDetallePage() {
                 <th className="w-6 px-1 py-2"></th>
                 <th className="text-left px-2 py-2 font-semibold">{levelLabels[drillLevel]}</th>
                 <th className="text-right px-2 py-2 font-semibold">Prima neta</th>
+                <th className="text-right px-2 py-2 font-semibold">Presupuesto</th>
+                <th className="text-right px-2 py-2 font-semibold">Diferencia</th>
+                <th className="text-right px-2 py-2 font-semibold">% Dif ppto</th>
+                <th className="text-right px-2 py-2 font-semibold">{cmpLabel.col}</th>
+                <th className="text-right px-2 py-2 font-semibold">{cmpLabel.difCol}</th>
+                <th className="text-right px-2 py-2 font-semibold">{cmpLabel.pctCol}</th>
+                <th className="text-right px-2 py-2 font-semibold">Pendiente</th>
               </tr>
             )}
           </thead>
@@ -449,15 +469,15 @@ export default function TablaDetallePage() {
                   const isAlert = l.presupuesto > 0 && l.pctDifPpto <= ALERT_THRESHOLD
                   const isCritical = l.presupuesto > 0 && l.pctDifPpto < -15
                   return (
-                    <tr key={l.linea} className={`border-b border-[#F0F0F0] cursor-pointer hover:bg-[#FFF5F5] transition-colors ${isAlert ? "bg-[#FFF3F3]" : isCritical ? "bg-[#FFF2F2]" : idx % 2 === 1 ? "bg-[#FAFAFA]" : "bg-white"}`}
+                    <tr key={l.linea} className={`group border-b border-[#F0F0F0] cursor-pointer transition-all duration-150 hover:bg-[#FFF5F5] hover:border-l-[3px] hover:border-l-[#E62800] ${isAlert ? "bg-[#FFF3F3]" : isCritical ? "bg-[#FFF2F2]" : idx % 2 === 1 ? "bg-[#FAFAFA]" : "bg-white"}`}
                       onClick={() => drill("gerencia", l.linea, { linea: l.linea })}>
                       <td className="px-1 py-1.5 text-center">
                         {isAlert ? (
                           <span title={`Desviación crítica: ${l.pctDifPpto}%`}>
-                            <AlertTriangle className="w-3.5 h-3.5 text-[#E62800] inline" />
+                            <AlertTriangle className="w-3.5 h-3.5 text-[#E62800] inline transition-transform group-hover:scale-125" />
                           </span>
                         ) : (
-                          <ChevronRight className="w-3.5 h-3.5 text-[#E62800] inline" />
+                          <ChevronRight className="w-3.5 h-3.5 text-[#E62800] inline transition-transform group-hover:scale-125" />
                         )}
                       </td>
                       <td className="px-2 py-1.5 font-medium text-[#111]">{l.linea}</td>
@@ -468,7 +488,10 @@ export default function TablaDetallePage() {
                       <td className="px-2 py-1.5 text-right text-gray-500">{l.pnAnioAnt ? fmt(l.pnAnioAnt) : ""}</td>
                       <td className={`px-2 py-1.5 text-right font-medium ${difYoy < 0 ? "text-[#E62800]" : "text-[#166534]"}`}>{l.pnAnioAnt ? (difYoy < 0 ? `(${fmt(Math.abs(difYoy))})` : fmt(difYoy)) : ""}</td>
                       <td className={`px-2 py-1.5 text-right ${difYoy < 0 ? "text-[#E62800]" : "text-[#166534]"}`}>{l.pctDifYoY ? `${l.pctDifYoY > 0 ? "+" : ""}${l.pctDifYoY}%` : ""}</td>
-                      <td className="px-2 py-1.5 text-right text-gray-500">{l.pendiente ? fmt(l.pendiente) : ""}</td>
+                      <td className="px-2 py-1.5 text-right text-gray-500 relative">
+                        {l.pendiente ? fmt(l.pendiente) : ""}
+                        <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[9px] text-[#E62800] opacity-0 group-hover:opacity-100 transition-opacity font-medium">→ Ver detalle</span>
+                      </td>
                     </tr>
                   )
                 })}
@@ -509,14 +532,13 @@ export default function TablaDetallePage() {
               </>
 
             ) : (
-              /* ─── LEVELS 2-5: GENERIC (name + primaNeta) ─── */
+              /* ─── LEVELS 2-5: FULL 9 COLUMNS ─── */
               <>
                 {filteredRows.length === 0 ? (
-                  <tr><td colSpan={3} className="px-3 py-8 text-center text-[#888]">
+                  <tr><td colSpan={10} className="px-3 py-8 text-center text-[#888]">
                     {drillLevel === "cliente" || drillLevel === "grupo" ? "Datos en integración" : `Sin datos para ${month} ${year}`}
                   </td></tr>
                 ) : filteredRows.map((r, idx) => {
-                  // Determine next level
                   const nextLevel: DrillLevel | null =
                     drillLevel === "gerencia" ? "vendedor" :
                     drillLevel === "vendedor" ? "grupo" :
@@ -529,14 +551,25 @@ export default function TablaDetallePage() {
                     drillLevel === "cliente" ? "cliente" : null
 
                   return (
-                    <tr key={r.name} className={`border-b border-[#F0F0F0] ${nextLevel ? "cursor-pointer" : ""} hover:bg-[#FFF5F5] transition-colors ${idx % 2 === 1 ? "bg-[#FAFAFA]" : "bg-white"}`}
+                    <tr key={r.name}
+                      className={`group border-b border-[#F0F0F0] ${nextLevel ? "cursor-pointer" : ""} transition-all duration-150 ${idx % 2 === 1 ? "bg-[#FAFAFA]" : "bg-white"} hover:bg-[#FFF5F5] hover:border-l-[3px] hover:border-l-[#E62800]`}
                       onClick={() => nextLevel && selKey && drill(nextLevel, r.name, { ...sel, [selKey]: r.name })}>
                       <td className="px-1 py-1.5 text-center">
-                        {nextLevel && <ChevronRight className="w-3 h-3 text-[#E62800] inline" />}
+                        {nextLevel && <ChevronRight className="w-3 h-3 text-[#E62800] inline transition-transform group-hover:scale-125" />}
                       </td>
                       <td className="px-2 py-1.5 font-medium text-[#111]">{r.name}</td>
                       <td className={`px-2 py-1.5 text-right font-medium ${r.primaNeta < 0 ? "text-[#E62800]" : ""}`}>
                         {r.primaNeta < 0 ? `(${fmt(Math.abs(r.primaNeta))})` : fmt(r.primaNeta)}
+                      </td>
+                      <td className="px-2 py-1.5 text-right text-gray-400">{r.presupuesto !== null ? fmt(r.presupuesto) : "—"}</td>
+                      <td className="px-2 py-1.5 text-right text-gray-400">{r.diferencia !== null ? fmt(r.diferencia) : "—"}</td>
+                      <td className="px-2 py-1.5 text-right text-gray-400">{r.pctDifPpto !== null ? `${r.pctDifPpto}%` : "—"}</td>
+                      <td className="px-2 py-1.5 text-right text-gray-400">{r.pnAnioAnt !== null ? fmt(r.pnAnioAnt) : "—"}</td>
+                      <td className="px-2 py-1.5 text-right text-gray-400">{r.difYoY !== null ? fmt(r.difYoY) : "—"}</td>
+                      <td className="px-2 py-1.5 text-right text-gray-400">{r.pctDifYoY !== null ? `${r.pctDifYoY}%` : "—"}</td>
+                      <td className="px-2 py-1.5 text-right relative">
+                        <span className="text-gray-400">{r.pendiente !== null ? fmt(r.pendiente) : "—"}</span>
+                        {nextLevel && <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[9px] text-[#E62800] opacity-0 group-hover:opacity-100 transition-opacity font-medium">→ Ver detalle</span>}
                       </td>
                     </tr>
                   )
@@ -545,6 +578,13 @@ export default function TablaDetallePage() {
                   <td className="px-1 py-2"></td>
                   <td className="px-2 py-2 font-bold">Total</td>
                   <td className="px-2 py-2 text-right font-bold">{fmt(rowTotal)}</td>
+                  <td className="px-2 py-2 text-right text-white/50">—</td>
+                  <td className="px-2 py-2 text-right text-white/50">—</td>
+                  <td className="px-2 py-2 text-right text-white/50">—</td>
+                  <td className="px-2 py-2 text-right text-white/50">—</td>
+                  <td className="px-2 py-2 text-right text-white/50">—</td>
+                  <td className="px-2 py-2 text-right text-white/50">—</td>
+                  <td className="px-2 py-2 text-right text-white/50">—</td>
                 </tr>
               </>
             )}
