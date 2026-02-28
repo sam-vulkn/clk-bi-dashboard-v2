@@ -1,6 +1,29 @@
 import { supabase } from "./supabase"
 
 // ============================================================
+// RBAC — Role-Based Access Control (preparation, always returns true)
+// user_role: 'director' | 'gerente' | 'vendedor' | 'admin'
+// ============================================================
+export type UserRole = "director" | "gerente" | "vendedor" | "admin"
+
+export interface AppUser {
+  id: number
+  email: string
+  nombre: string
+  user_role: UserRole
+  gerencia_id?: string
+  vendedor_id?: string
+}
+
+/**
+ * Check if user has permission for a resource.
+ * Currently always returns true — will be implemented when auth is active.
+ */
+export function hasPermission(_user: AppUser | null, _resource: string): boolean {
+  return true // Phase 1: no restrictions
+}
+
+// ============================================================
 // PRIMARY SOURCE: public.dashboard_data (10,566 rows)
 // Columns: LBussinesNombre, GerenciaNombre, VendNombre,
 // PrimaNeta, Descuento (text), TCPago, FLiquidacion (text),
