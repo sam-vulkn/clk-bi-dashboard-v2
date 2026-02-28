@@ -13,7 +13,11 @@ const TABS = [
   { href: "/cobranza", label: "Convenios" },
 ]
 
-export function PageTabs() {
+interface PageTabsProps {
+  alertCount?: number // Badge for Tabla detalle
+}
+
+export function PageTabs({ alertCount }: PageTabsProps) {
   const pathname = usePathname()
 
   return (
@@ -32,13 +36,18 @@ export function PageTabs() {
             <Link
               href={tab.href}
               className={cn(
-                "px-3 py-2.5 text-[13px] transition-colors relative -mb-px whitespace-nowrap",
+                "px-3 py-2.5 text-[13px] transition-colors relative -mb-px whitespace-nowrap flex items-center gap-1",
                 active
                   ? "text-[#041224] font-bold border-b-2 border-[#E62800]"
                   : "text-[#CCD1D3] hover:text-[#041224]"
               )}
             >
               {tab.label}
+              {tab.href === "/tabla-detalle" && alertCount !== undefined && alertCount > 0 && (
+                <span className="inline-flex items-center justify-center w-4 h-4 text-[9px] font-bold bg-[#E62800] text-white rounded-full">
+                  {alertCount}
+                </span>
+              )}
             </Link>
           </div>
         )

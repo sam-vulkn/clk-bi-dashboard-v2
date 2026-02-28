@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect, useRef } from "react"
-import { ChevronRight, ChevronLeft, Search, Download } from "lucide-react"
+import { ChevronRight, ChevronLeft, Search, Download, AlertTriangle } from "lucide-react"
 import { PageTabs } from "@/components/page-tabs"
 import { PageFooter } from "@/components/page-footer"
 import { getLineasNegocio, getGerencias, getVendedores, getGrupos, getClientes, getPolizas } from "@/lib/queries"
@@ -27,6 +27,9 @@ const SEED: LineaFull[] = [
   { linea: "Cartera Tradicional", primaNeta: 10632028, presupuesto: 12322087, diferencia: -1690059, pctDifPpto: -13.7, pnAnioAnt: 10057425, difYoY: 574603, pctDifYoY: 5.71, pendiente: 7416036 },
   { linea: "Call Center", primaNeta: 2602364, presupuesto: 6398081, diferencia: -3795717, pctDifPpto: -59.3, pnAnioAnt: 853685, difYoY: 1748679, pctDifYoY: 204.84, pendiente: 12236199 },
 ]
+
+// Umbral configurable de alerta por desviación (default -20%)
+const ALERT_THRESHOLD = -20
 
 type DrillLevel = "linea" | "gerencia" | "vendedor" | "grupo" | "cliente" | "poliza"
 
@@ -178,6 +181,9 @@ export default function TablaDetallePage() {
   const totalDifYoy = filteredLineas.reduce((s, l) => s + l.difYoY, 0)
   const totalDifYoyPct = totalLineas.pnAnioAnt > 0 ? ((totalDifYoy / totalLineas.pnAnioAnt) * 100).toFixed(2) : ""
 
+  // Alert count: líneas with % dif ppto <= threshold
+  const alertCount = filteredLineas.filter(l => l.presupuesto > 0 && l.pctDifPpto <= ALERT_THRESHOLD).length
+
   const drillTabs: { level: DrillLevel; label: string }[] = [
     { level: "linea", label: "Línea" },
     { level: "gerencia", label: "Gerencia" },
@@ -234,7 +240,7 @@ export default function TablaDetallePage() {
 
   return (
     <div>
-      <PageTabs />
+      <PageTabs alertCount={alertCount} />
 
       {/* Title + drill tabs */}
       <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
@@ -356,11 +362,20 @@ export default function TablaDetallePage() {
                 {filteredLineas.map((l, idx) => {
                   const dif = l.diferencia
                   const difYoy = l.difYoY
+                  const isAlert = l.presupuesto > 0 && l.pctDifPpto <= ALERT_THRESHOLD
                   const isCritical = l.presupuesto > 0 && l.pctDifPpto < -15
                   return (
-                    <tr key={l.linea} className={`border-b border-[#F0F0F0] cursor-pointer hover:bg-[#FFF5F5] transition-colors ${isCritical ? "bg-[#FFF2F2]" : idx % 2 === 1 ? "bg-[#FAFAFA]" : "bg-white"}`}
+                    <tr key={l.linea} className={`border-b border-[#F0F0F0] cursor-pointer hover:bg-[#FFF5F5] transition-colors ${isAlert ? "bg-[#FFF3F3]" : isCritical ? "bg-[#FFF2F2]" : idx % 2 === 1 ? "bg-[#FAFAFA]" : "bg-white"}`}
                       onClick={() => drill("gerencia", l.linea, { linea: l.linea })}>
-                      <td className="px-1 py-1.5 text-center"><ChevronRight className="w-3.5 h-3.5 text-[#E62800] inline" /></td>
+                      <td className="px-1 py-1.5 text-center">
+                        {isAlert ? (
+                          <span title={`Desviación crítica: ${l.pctDifPpto}%`}>
+                            <AlertTriangle className="w-3.5 h-3.5 text-[#E62800] inline" />
+                          </span>
+                        ) : (
+                          <ChevronRight className="w-3.5 h-3.5 text-[#E62800] inline" />
+                        )}
+                      </td>
                       <td className="px-2 py-1.5 font-medium text-[#111]">{l.linea}</td>
                       <td className="px-2 py-1.5 text-right font-medium">{fmt(l.primaNeta)}</td>
                       <td className="px-2 py-1.5 text-right text-gray-500">{l.presupuesto ? fmt(l.presupuesto) : ""}</td>
