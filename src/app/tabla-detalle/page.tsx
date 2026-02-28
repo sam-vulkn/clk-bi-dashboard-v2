@@ -8,6 +8,7 @@ import { getLineasNegocio, getGerencias, getVendedores, getGrupos, getClientes, 
 import type { SearchResult } from "@/lib/queries"
 import type { PolizaRow } from "@/lib/queries"
 import { exportExcel, exportPDF } from "@/lib/export"
+import { NLQuery } from "@/components/nl-query"
 
 function fmt(v: number) {
   return new Intl.NumberFormat("es-MX", { style: "currency", currency: "MXN", minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(v)
@@ -619,6 +620,9 @@ export default function TablaDetallePage() {
           )}
         </div>
       )}
+
+      {/* Natural Language Query — beta, feature flag OFF */}
+      <NLQuery periodo={periodo} year={year} />
 
       <PageFooter showFootnote={drillLevel === "linea"} />
     </div>
