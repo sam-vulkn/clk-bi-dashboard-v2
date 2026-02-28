@@ -12,7 +12,7 @@ export function PageFooter({ showFootnote = false }: { showFootnote?: boolean })
 
   return (
     <footer className="mt-8 pt-4 border-t border-[#E5E7EB] flex items-center justify-between text-[10px]">
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-3">
         {/* IntraClick logo */}
         <div className="flex items-center gap-1.5 bg-[#1a1a2e] rounded px-2.5 py-1.5">
           <svg viewBox="0 0 16 16" className="w-3.5 h-3.5" fill="none">
@@ -22,9 +22,11 @@ export function PageFooter({ showFootnote = false }: { showFootnote?: boolean })
           <span className="text-white text-[9px] font-bold tracking-wide">INTRA</span>
           <span className="text-[#E8735A] text-[9px] font-bold tracking-wide">CLICK</span>
         </div>
-      </div>
-      <div className="text-[#111] text-center max-w-lg italic text-[9px]">
-        {showFootnote ? "* El total de la prima neta del año anterior está al corte del día: 26/febrero/2025" : "\u00A0"}
+        {showFootnote && (
+          <span className="text-[9px] text-gray-500 italic">
+            * El total de la prima neta del año anterior está al corte del día: 26/febrero/2025
+          </span>
+        )}
       </div>
       <div className="text-gray-500 text-right leading-tight">
         <div>Fecha de actualización.</div>
