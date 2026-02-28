@@ -1,134 +1,144 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useRef, useState } from "react"
 
 interface GaugeProps {
-  value: number       // e.g. 98.5 (millions) — can be BELOW min
+  value: number       // e.g. 98.5 (millions)
   min?: number        // default 110
   max?: number        // default 140
-  budget?: number     // e.g. 129.5
+  budget?: number     // default 129.5
 }
 
 export function Gauge({ value, min = 110, max = 140, budget = 129.5 }: GaugeProps) {
-  const [animProgress, setAnimProgress] = useState(0)
+  const [animatedAngle, setAnimatedAngle] = useState(-90) // start at LOW
+  const startTime = useRef(0)
+  const rafRef = useRef(0)
 
-  const cx = 170
-  const cy = 185
-  const outerR = 155
-  const innerR = 100
-  const midR = (outerR + innerR) / 2
-  const thickness = outerR - innerR
+  // Center and radii
+  const cx = 200, cy = 210
+  const rOuter = 175, rInner = 110
+  const bezelR = rOuter + 8
 
-  // 180° = left, 0° = right. Values below min clamp to left edge.
-  const valToAngle = (v: number) => {
-    const clamped = Math.max(min, Math.min(max, v))
-    return 180 - ((clamped - min) / (max - min)) * 180
+  // Angles: -90 (left/LOW) to 90 (right/CRITICAL) mapped to 180° arc
+  const valueToAngle = (v: number) => {
+    const clamped = Math.max(min - 15, Math.min(max, v)) // allow below scale
+    const pct = (clamped - min) / (max - min)
+    return -90 + pct * 180
   }
 
-  const angleToXY = (deg: number, r: number) => {
-    const rad = (deg * Math.PI) / 180
-    return { x: cx + r * Math.cos(rad), y: cy - r * Math.sin(rad) }
-  }
-
-  const describeArc = (startVal: number, endVal: number) => {
-    const a1 = valToAngle(startVal)
-    const a2 = valToAngle(endVal)
-    const s = angleToXY(a1, midR)
-    const e = angleToXY(a2, midR)
-    const large = Math.abs(a1 - a2) > 180 ? 1 : 0
-    return `M ${s.x} ${s.y} A ${midR} ${midR} 0 ${large} 1 ${e.x} ${e.y}`
-  }
+  const targetAngle = valueToAngle(value)
 
   useEffect(() => {
-    const start = performance.now()
-    const dur = 1200
+    const duration = 1400
+    const startAngle = -90
+    startTime.current = performance.now()
+
     const tick = (now: number) => {
-      const t = Math.min((now - start) / dur, 1)
+      const elapsed = now - startTime.current
+      const t = Math.min(elapsed / duration, 1)
+      // ease-out cubic
       const eased = 1 - Math.pow(1 - t, 3)
-      setAnimProgress(eased)
-      if (t < 1) requestAnimationFrame(tick)
+      setAnimatedAngle(startAngle + (targetAngle - startAngle) * eased)
+      if (t < 1) rafRef.current = requestAnimationFrame(tick)
     }
-    requestAnimationFrame(tick)
-  }, [value])
+    rafRef.current = requestAnimationFrame(tick)
+    return () => cancelAnimationFrame(rafRef.current)
+  }, [targetAngle])
 
-  // Needle: if value < min, needle points past the left edge of the arc
-  // This creates the dramatic "below scale" effect
-  const needleTargetAngle = value < min
-    ? 180 + ((min - value) / (max - min)) * 30  // extend past 180° proportionally
-    : valToAngle(value)
-  const needleAngle = 180 + (needleTargetAngle - 180) * animProgress
-  const needleTip = angleToXY(needleAngle, outerR - 5)
-
-  // 4 zones: red · orange · yellow · green
-  const zones = [
-    { from: 110, to: 117.5, color: "#C00000" },
-    { from: 117.5, to: 125, color: "#E8735A" },
-    { from: 125, to: 132.5, color: "#FFD700" },
-    { from: 132.5, to: 140, color: "#375623" },
+  // 10 segments
+  const segmentColors = [
+    "#2D7A2D", "#3D9E3D", "#52C052", "#7FD44C", "#C8D430",
+    "#F5C518", "#F59518", "#F06820", "#D43B20", "#B01010",
   ]
+  const totalAngle = 180
+  const gapDeg = 2
+  const segAngle = (totalAngle - gapDeg * (segmentColors.length - 1)) / segmentColors.length
 
-  // Ticks
-  const ticks = [110, 115, 120, 125, 130, 135, 140]
+  // Helper: arc path for a donut segment
+  const arcPath = (startDeg: number, endDeg: number, rOut: number, rIn: number) => {
+    const toRad = (d: number) => (d * Math.PI) / 180
+    const startRad = toRad(startDeg - 90) // rotate so -90 = left
+    const endRad = toRad(endDeg - 90)
+    const x1o = cx + rOut * Math.cos(startRad), y1o = cy + rOut * Math.sin(startRad)
+    const x2o = cx + rOut * Math.cos(endRad), y2o = cy + rOut * Math.sin(endRad)
+    const x1i = cx + rIn * Math.cos(endRad), y1i = cy + rIn * Math.sin(endRad)
+    const x2i = cx + rIn * Math.cos(startRad), y2i = cy + rIn * Math.sin(startRad)
+    const large = endDeg - startDeg > 180 ? 1 : 0
+    return `M${x1o},${y1o} A${rOut},${rOut} 0 ${large} 1 ${x2o},${y2o} L${x1i},${y1i} A${rIn},${rIn} 0 ${large} 0 ${x2i},${y2i} Z`
+  }
 
-  const fmtV = (v: number) => `$${v}M`
+  // Bezel arc (outer border)
+  const bezelPath = arcPath(0, 180, bezelR, bezelR - 4)
+
+  // Needle
+  const needleRad = ((animatedAngle - 90) * Math.PI) / 180 // adjusted
+  const needleAngleRad = ((animatedAngle) * Math.PI) / 180 + Math.PI / 2 * 0 // let me recalculate
+  // animatedAngle: -90 = left (pointing left), 0 = up, 90 = right
+  // Convert to standard: -90 maps to π (left), 0 maps to π/2*3 (up)... 
+  // Actually for SVG: angle 0 = right, 90 = down
+  // We want: -90 → pointing left, 0 → pointing up, 90 → pointing right
+  // In SVG rotation: -90 → rotate(-90) from up = left ✓
+  const needleLength = rOuter - 15
+
+  // Needle tip coordinates
+  const nRad = ((animatedAngle - 90) * Math.PI) / 180
+  const tipX = cx + needleLength * Math.cos(nRad)
+  const tipY = cy + needleLength * Math.sin(nRad)
+
+  // Needle base perpendicular (width = 8px)
+  const perpRad = nRad + Math.PI / 2
+  const bw = 5
+  const b1x = cx + bw * Math.cos(perpRad), b1y = cy + bw * Math.sin(perpRad)
+  const b2x = cx - bw * Math.cos(perpRad), b2y = cy - bw * Math.sin(perpRad)
 
   return (
-    <div className="relative flex flex-col items-center" style={{ paddingBottom: 20 }}>
-      <svg viewBox="0 0 340 220" className="w-full" style={{ overflow: "visible" }}>
-        {/* Zone arcs */}
-        {zones.map((z, i) => (
-          <path
-            key={i}
-            d={describeArc(z.from, z.to)}
-            fill="none"
-            stroke={z.color}
-            strokeWidth={thickness}
-            strokeLinecap="butt"
-          />
-        ))}
+    <div className="w-full flex flex-col items-center">
+      <svg viewBox="0 0 400 250" className="w-full max-w-[320px]">
+        <defs>
+          <radialGradient id="pivotGrad" cx="50%" cy="40%" r="50%">
+            <stop offset="0%" stopColor="#FFFFFF" />
+            <stop offset="60%" stopColor="#E0E0E0" />
+            <stop offset="100%" stopColor="#B0B0B0" />
+          </radialGradient>
+          <filter id="needleShadow">
+            <feDropShadow dx="2" dy="2" stdDeviation="2" floodOpacity="0.4" />
+          </filter>
+        </defs>
 
-        {/* Tick marks + labels */}
-        {ticks.map((t) => {
-          const angle = valToAngle(t)
-          const outer = angleToXY(angle, outerR + 3)
-          const inner = angleToXY(angle, outerR + 10)
-          const label = angleToXY(angle, outerR + 24)
-          return (
-            <g key={t}>
-              <line x1={outer.x} y1={outer.y} x2={inner.x} y2={inner.y} stroke="#666" strokeWidth={1.5} />
-              <text
-                x={label.x} y={label.y}
-                textAnchor="middle" dominantBaseline="middle"
-                fontSize="9" fontWeight="600" fill="#555" fontFamily="system-ui"
-              >
-                {fmtV(t)}
-              </text>
-            </g>
-          )
+        {/* Bezel */}
+        <path d={arcPath(0, 180, bezelR, rOuter + 1)} fill="#4A4A4A" />
+
+        {/* Segments */}
+        {segmentColors.map((color, i) => {
+          const start = i * (segAngle + gapDeg)
+          const end = start + segAngle
+          return <path key={i} d={arcPath(start, end, rOuter, rInner)} fill={color} />
         })}
 
-        {/* Budget marker line on arc */}
-        {(() => {
-          const bAngle = valToAngle(budget)
-          const bOuter = angleToXY(bAngle, outerR + 2)
-          const bInner = angleToXY(bAngle, innerR - 2)
-          return <line x1={bOuter.x} y1={bOuter.y} x2={bInner.x} y2={bInner.y} stroke="#333" strokeWidth={2.5} />
-        })()}
+        {/* Needle */}
+        <polygon
+          points={`${tipX},${tipY} ${b1x},${b1y} ${b2x},${b2y}`}
+          fill="#3D3D3D"
+          filter="url(#needleShadow)"
+        />
 
-        {/* Needle — line from center to tip */}
-        <line x1={cx} y1={cy} x2={needleTip.x} y2={needleTip.y} stroke="#111" strokeWidth={3} strokeLinecap="round" />
-        <circle cx={cx} cy={cy} r={10} fill="#111" />
-        <circle cx={cx} cy={cy} r={4} fill="#fff" />
+        {/* Pivot circle (metallic) */}
+        <circle cx={cx} cy={cy} r={18} fill="url(#pivotGrad)" stroke="#999" strokeWidth="1" />
+        <circle cx={cx} cy={cy} r={6} fill="#888" />
 
-        {/* Value below gauge */}
-        <text x={cx} y={cy + 30} textAnchor="middle" fontSize="26" fontWeight="bold" fill="#C00000" fontFamily="Lato, system-ui">
-          {fmtV(value)}
-        </text>
+        {/* Labels */}
+        <text x={cx - rOuter + 10} y={cy + 30} fontSize="11" fontWeight="bold" fill="#111" textAnchor="start">PRIMA NETA</text>
+        <text x={cx + rOuter - 10} y={cy + 30} fontSize="11" fontWeight="bold" fill="#111" textAnchor="end">PRESUPUESTO</text>
       </svg>
 
-      {/* Budget badge — top right, legible */}
-      <div className="absolute top-1 right-1 bg-[#375623] text-white px-3 py-1.5 rounded text-[12px] font-bold shadow">
-        Presupuesto: {fmtV(budget)}
+      {/* Value below */}
+      <div className="text-center -mt-2">
+        <div className="text-[32px] font-bold text-[#C00000] font-lato leading-none">
+          ${value < 1000 ? value.toFixed(1) : (value).toFixed(1)}M
+        </div>
+        <div className="text-[12px] text-gray-500 mt-0.5">
+          de ${budget}M presupuesto
+        </div>
       </div>
     </div>
   )

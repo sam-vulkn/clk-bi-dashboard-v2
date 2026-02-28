@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { ChevronRight, ChevronDown, Search, RefreshCw, Eraser, SlidersHorizontal, Maximize2, Pencil } from "lucide-react"
+import { ChevronRight, ChevronDown, Search, SlidersHorizontal, Maximize2, Pencil } from "lucide-react"
 import { PageTabs } from "@/components/page-tabs"
 import { PageFooter } from "@/components/page-footer"
 import { getLineasNegocio, getGerencias, getVendedores } from "@/lib/queries"
@@ -107,7 +107,7 @@ export default function TablaDetallePage() {
     setExpandedGer(prev => ({ ...prev, [key]: !prev[key] }))
   }
 
-  const resetFilters = () => { setYear("2026"); setMonth("Febrero"); setSearch("") }
+  // resetFilters removed per Suzanne directive
 
   const filtered = search ? lineas.filter(l => l.linea.toLowerCase().includes(search.toLowerCase())) : lineas
   const total = {
@@ -170,8 +170,7 @@ export default function TablaDetallePage() {
           <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Buscar..." className="pl-7 pr-3 py-1 border border-[#E5E7EB] rounded text-xs w-44 bg-white" />
         </div>
         <button onClick={() => { setShowToast(true); setTimeout(() => setShowToast(false), 2000) }} className="text-gray-400 hover:text-[#111]" title="Editar"><Pencil className="w-4 h-4" /></button>
-        <button onClick={() => setFetchKey(k => k + 1)} className="text-gray-400 hover:text-[#111]" title="Refrescar"><RefreshCw className="w-4 h-4" /></button>
-        <button onClick={resetFilters} className="text-gray-400 hover:text-[#111]" title="Limpiar"><Eraser className="w-4 h-4" /></button>
+        <span className="text-xs text-gray-400">Actualizado: 27/02/2026</span>
         <button className="text-gray-400 hover:text-[#111]" title="Columnas"><SlidersHorizontal className="w-4 h-4" /></button>
         <button onClick={() => document.documentElement.requestFullscreen?.()} className="text-gray-400 hover:text-[#111]" title="Pantalla completa"><Maximize2 className="w-4 h-4" /></button>
       </div>

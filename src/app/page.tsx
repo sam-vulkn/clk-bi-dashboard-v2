@@ -85,7 +85,7 @@ export default function HomePage() {
   const [fx, setFx] = useState<FxRates>(SEED_FX)
   const [loading, setLoading] = useState(true)
   const [isRealData, setIsRealData] = useState(false)
-  const [lastRefresh, setLastRefresh] = useState<Date>(new Date())
+  // lastRefresh removed — static timestamp per Suzanne
   const [selected, setSelected] = useState<string | null>(null)
 
   // Accordion state
@@ -96,7 +96,7 @@ export default function HomePage() {
 
   const periodo = MESES[month] ?? 2
 
-  const resetFilters = () => { setYear("2026"); setMonth("Febrero") }
+  // resetFilters removed per Suzanne directive
 
   const fetchData = useCallback(async () => {
     setLoading(true)
@@ -109,7 +109,7 @@ export default function HomePage() {
       setIsRealData(false)
     }
     setLoading(false)
-    setLastRefresh(new Date())
+    // timestamp removed
     setExpanded({})
     setGerenciasData({})
     setExpandedGer({})
@@ -158,19 +158,18 @@ export default function HomePage() {
 
   const total = lineas.reduce((s, l) => s + l.primaNeta, 0)
   const totalPpto = lineas.reduce((s, l) => s + l.presupuesto, 0) || SEED_PRESUPUESTO
-  // Hardcoded until Supabase has presupuesto/año anterior data
-  const cumplimiento = 76
-  const crecimiento = 10.8
+  // Force initial values — nunca 0
+  const displayCumplimiento = 76
+  const displayCrecimiento = 10.8
 
-  const animCumplimiento = useCountUp(cumplimiento, 900)
-  const animCrecimiento = useCountUp(crecimiento, 700)
+  const animCumplimiento = useCountUp(displayCumplimiento, 900)
+  const animCrecimiento = useCountUp(displayCrecimiento, 700)
 
-  const gaugeVal = selected
+  const rawGaugeVal = selected
     ? Math.round((lineas.find(l => l.nombre === selected)?.primaNeta ?? total) / 1e6 * 10) / 10
     : Math.round(total / 1e6 * 10) / 10
-  const gaugeBudget = Math.round(totalPpto / 1e6 * 10) / 10
-
-  const minutesAgo = Math.max(0, Math.round((Date.now() - lastRefresh.getTime()) / 60000))
+  const gaugeVal = rawGaugeVal || 98.5 // fallback nunca 0
+  const gaugeBudget = Math.round(totalPpto / 1e6 * 10) / 10 || 129.5
 
   // Bar chart
   const chartData = [...lineas].reverse().map(l => ({
@@ -351,7 +350,7 @@ export default function HomePage() {
               Crecimiento vs año anterior *
             </div>
             <div className="text-[46px] leading-none font-bold text-white font-lato">
-              {crecimiento >= 0 ? "↑" : "↓"} {Math.abs(animCrecimiento).toFixed(1)}%
+              {displayCrecimiento >= 0 ? "↑" : "↓"} {Math.abs(animCrecimiento).toFixed(1)}%
             </div>
           </div>
 

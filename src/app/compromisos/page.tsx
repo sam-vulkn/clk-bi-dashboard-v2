@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect, useCallback } from "react"
-import { RefreshCw, SlidersHorizontal, Maximize2 } from "lucide-react"
+import { SlidersHorizontal, Maximize2 } from "lucide-react"
 import { PageTabs } from "@/components/page-tabs"
 import { PageFooter } from "@/components/page-footer"
 import { useCountUp } from "@/lib/use-count-up"
@@ -119,7 +119,7 @@ export default function CompromisosPage() {
 
       {/* Toolbar */}
       <div className="flex items-center justify-end gap-2 mb-2">
-        <button onClick={fetchData} className="text-gray-400 hover:text-[#111]"><RefreshCw className="w-4 h-4" /></button>
+        <span className="text-xs text-gray-400">Actualizado: 27/02/2026</span>
         <button className="text-gray-400 hover:text-[#111]"><SlidersHorizontal className="w-4 h-4" /></button>
         <button onClick={() => document.documentElement.requestFullscreen?.()} className="text-gray-400 hover:text-[#111]"><Maximize2 className="w-4 h-4" /></button>
       </div>
