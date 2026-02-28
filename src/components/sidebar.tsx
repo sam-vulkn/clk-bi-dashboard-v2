@@ -26,8 +26,8 @@ export function Sidebar() {
         style={{ width: 160, minWidth: 160, maxWidth: 160 }}
       >
         {/* Logo — fondo blanco, zona de seguridad */}
-        <div className="bg-white px-4 py-4 border-b border-[#E5E7E9] flex items-center justify-center">
-          <div className="text-[#E62800] font-black text-sm tracking-tight">
+        <div className="bg-white px-4 py-3 border-b border-[#E5E7E9] flex items-center justify-center">
+          <div className="text-[#E62800] font-black text-sm tracking-tight" style={{ height: 28, lineHeight: "28px" }}>
             Click<span className="text-[#041224]">SEGUROS</span>
           </div>
         </div>
@@ -35,13 +35,13 @@ export function Sidebar() {
         {/* Grupo Click — bloque oscuro */}
         <Link
           href="/"
-          className="bg-[#2D2D2D] text-white font-bold text-sm px-4 py-8 text-center block italic no-underline hover:bg-[#3D3D3D] transition-colors"
+          className="bg-[#2D2D2D] text-white font-bold text-sm px-4 py-6 text-center block italic no-underline hover:bg-[#3D3D3D] transition-colors"
         >
           Grupo Click
         </Link>
 
         {/* Cobranza links */}
-        <div className="p-3 flex flex-col gap-2 mt-2">
+        <div className="p-3 flex flex-col gap-2">
           <Link
             href="/cobranza-dia"
             className={`bg-[#FEE2E2] text-[#1A1A1A] font-bold text-sm px-4 py-3 rounded-md text-center no-underline hover:bg-[#FECACA] transition-colors ${pathname === "/cobranza-dia" ? "ring-2 ring-[#E62800]" : ""}`}
