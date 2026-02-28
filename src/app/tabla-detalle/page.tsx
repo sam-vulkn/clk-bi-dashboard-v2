@@ -169,7 +169,7 @@ export default function TablaDetallePage() {
           <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" />
           <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Buscar..." className="pl-7 pr-3 py-1 border border-[#E5E7EB] rounded text-xs w-44 bg-white" />
         </div>
-        <span className="text-xs text-[#CCD1D3]">Actualizado: 27/02/2026</span>
+        <span className="text-xs text-[#CCD1D3]">Actualizado: {new Date().toLocaleDateString("es-MX", { day: "2-digit", month: "2-digit", year: "numeric" })}</span>
       </div>
 
 

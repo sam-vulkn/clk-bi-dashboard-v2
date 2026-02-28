@@ -167,11 +167,13 @@ export default function HomePage() {
   const animDolar = useCountUp(fx.usd, 1200)
   const animPeso = useCountUp(fx.dop, 1000)
 
+  const totalAnioAnt = lineas.reduce((s, l) => s + l.anioAnterior, 0)
   const rawGaugeVal = selected
     ? Math.round((lineas.find(l => l.nombre === selected)?.primaNeta ?? total) / 1e6 * 10) / 10
     : Math.round(total / 1e6 * 10) / 10
   const gaugeVal = rawGaugeVal || 98.5 // fallback nunca 0
   const gaugeBudget = Math.round(totalPpto / 1e6 * 10) / 10 || 129.5
+  const gaugePrevYear = Math.round(totalAnioAnt / 1e6 * 10) / 10 || 88.9
 
   // Bar chart
   const chartData = [...lineas].reverse().map(l => ({
@@ -216,7 +218,7 @@ export default function HomePage() {
         <div className="grid grid-cols-[45%_55%] gap-0">
           {/* LEFT — Gauge */}
           <div className="p-3 flex items-center justify-center">
-            <Gauge value={gaugeVal} budget={gaugeBudget} />
+            <Gauge value={gaugeVal} prevYear={gaugePrevYear} budget={gaugeBudget} />
           </div>
 
           {/* RIGHT — Accordion Table */}
