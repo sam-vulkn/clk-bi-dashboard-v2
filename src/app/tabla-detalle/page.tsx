@@ -142,7 +142,7 @@ export default function TablaDetallePage() {
               className={`px-3 py-1.5 rounded text-[11px] font-medium transition-colors ${
                 drillLevel === b.level
                   ? "bg-[#041224] text-white"
-                  : "bg-[#E5E7E9] text-[#041224]"
+                  : "bg-[#FDECEA] text-[#041224]"
               }`}
             >
               {b.label}
