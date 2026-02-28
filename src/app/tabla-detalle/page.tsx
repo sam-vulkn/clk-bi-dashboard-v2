@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from "react"
 import { ChevronRight, ChevronLeft, Search, Download, AlertTriangle } from "lucide-react"
 import { PageTabs } from "@/components/page-tabs"
 import { PageFooter } from "@/components/page-footer"
-import { getLineasNegocio, getGerencias, getVendedores, getGrupos, getClientes, getPolizas } from "@/lib/queries"
+import { getLineasNegocio, getGerencias, getVendedores, getGrupos, getClientes, getPolizas, getRankedVendedores, getRankedAseguradoras } from "@/lib/queries"
 import type { PolizaRow } from "@/lib/queries"
 import { exportExcel, exportPDF } from "@/lib/export"
 
@@ -56,6 +56,11 @@ export default function TablaDetallePage() {
   const [rows, setRows] = useState<SimpleRow[]>([])
   const [polizas, setPolizas] = useState<PolizaRow[]>([])
 
+  // Rankings
+  const [topVendedores, setTopVendedores] = useState<{ vendedor: string; primaNeta: number }[]>([])
+  const [bottomVendedores, setBottomVendedores] = useState<{ vendedor: string; primaNeta: number }[]>([])
+  const [topAseguradoras, setTopAseguradoras] = useState<{ aseguradora: string; primaNeta: number; pct: number }[]>([])
+
   const tableRef = useRef<HTMLDivElement>(null)
   useEffect(() => { document.title = "Tabla detalle | CLK BI Dashboard" }, [])
   const periodo = MESES[month] ?? 2
@@ -79,6 +84,21 @@ export default function TablaDetallePage() {
     }
     const ks = setTimeout(() => { if (!cancelled) { cancelled = true; setLineas(SEED); setLoading(false) } }, 3000)
     load()
+
+    // Load rankings in parallel
+    getRankedVendedores(periodo, year).then(v => {
+      if (v && v.length > 0) {
+        setTopVendedores(v.slice(0, 5))
+        setBottomVendedores(v.slice(-5).reverse())
+      }
+    })
+    getRankedAseguradoras(periodo, year).then(a => {
+      if (a && a.length > 0) {
+        const total = a.reduce((s, x) => s + x.primaNeta, 0)
+        setTopAseguradoras(a.slice(0, 5).map(x => ({ ...x, pct: total > 0 ? Math.round((x.primaNeta / total) * 1000) / 10 : 0 })))
+      }
+    })
+
     return () => { cancelled = true; clearTimeout(ks) }
   }, [periodo, year])
 
@@ -467,6 +487,75 @@ export default function TablaDetallePage() {
           </tbody>
         </table>
       </div>
+
+      {/* Rankings — only visible at linea level */}
+      {drillLevel === "linea" && (topVendedores.length > 0 || topAseguradoras.length > 0) && (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 mt-4">
+          {/* RANKING VENDEDORES */}
+          {topVendedores.length > 0 && (
+            <div className="bi-card p-3">
+              <h3 className="text-xs font-bold text-[#041224] mb-2">🏆 Top 5 Vendedores</h3>
+              <table className="w-full text-[10px]">
+                <thead><tr className="bg-[#041224] text-white border-b-2 border-b-[#E62800]">
+                  <th className="px-2 py-1.5 text-left font-semibold w-8">#</th>
+                  <th className="px-2 py-1.5 text-left font-semibold">Vendedor</th>
+                  <th className="px-2 py-1.5 text-right font-semibold">Prima Neta</th>
+                </tr></thead>
+                <tbody>
+                  {topVendedores.map((v, i) => (
+                    <tr key={v.vendedor} className="bg-[#F1F8F1] border-b border-[#E5E7E9]">
+                      <td className="px-2 py-1 font-bold text-[#2E7D32]">↑ {i + 1}</td>
+                      <td className="px-2 py-1">{v.vendedor}</td>
+                      <td className="px-2 py-1 text-right font-medium">{fmt(v.primaNeta)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+              {bottomVendedores.length > 0 && (
+                <>
+                  <h3 className="text-xs font-bold text-[#041224] mt-3 mb-2">⬇️ Bottom 5 Vendedores</h3>
+                  <table className="w-full text-[10px]">
+                    <tbody>
+                      {bottomVendedores.map((v, i) => (
+                        <tr key={v.vendedor} className="bg-[#FFF3F3] border-b border-[#E5E7E9]">
+                          <td className="px-2 py-1 font-bold text-[#E62800] w-8">↓ {i + 1}</td>
+                          <td className="px-2 py-1">{v.vendedor}</td>
+                          <td className="px-2 py-1 text-right font-medium">{fmt(v.primaNeta)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </>
+              )}
+            </div>
+          )}
+
+          {/* RANKING ASEGURADORAS */}
+          {topAseguradoras.length > 0 && (
+            <div className="bi-card p-3">
+              <h3 className="text-xs font-bold text-[#041224] mb-2">🏢 Top 5 Aseguradoras</h3>
+              <table className="w-full text-[10px]">
+                <thead><tr className="bg-[#041224] text-white border-b-2 border-b-[#E62800]">
+                  <th className="px-2 py-1.5 text-left font-semibold w-8">#</th>
+                  <th className="px-2 py-1.5 text-left font-semibold">Aseguradora</th>
+                  <th className="px-2 py-1.5 text-right font-semibold">Prima Neta</th>
+                  <th className="px-2 py-1.5 text-right font-semibold">% del total</th>
+                </tr></thead>
+                <tbody>
+                  {topAseguradoras.map((a, i) => (
+                    <tr key={a.aseguradora} className={`border-b border-[#E5E7E9] ${i % 2 === 1 ? "bg-[#FAFAFA]" : "bg-white"}`}>
+                      <td className="px-2 py-1 font-bold text-[#041224]">{i + 1}</td>
+                      <td className="px-2 py-1">{a.aseguradora}</td>
+                      <td className="px-2 py-1 text-right font-medium">{fmt(a.primaNeta)}</td>
+                      <td className="px-2 py-1 text-right text-[#041224] font-medium">{a.pct}%</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      )}
 
       <PageFooter showFootnote={drillLevel === "linea"} />
     </div>

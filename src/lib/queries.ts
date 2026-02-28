@@ -297,6 +297,52 @@ export async function getPolizas(
 }
 
 /**
+ * Fetch all vendedores ranked by prima (for rankings)
+ */
+export async function getRankedVendedores(
+  periodo?: number,
+  año?: string
+): Promise<{ vendedor: string; primaNeta: number }[] | null> {
+  try {
+    let query = supabase
+      .from("dashboard_data")
+      .select("VendNombre, PrimaNeta, TCPago, Descuento, FLiquidacion")
+    if (periodo) query = query.eq("Periodo", periodo)
+    if (año) query = query.ilike("FLiquidacion", `%/${año.slice(2)} %`)
+    const { data, error } = await query
+    if (error || !data?.length) return null
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const grouped = groupBySum(data as any[], "VendNombre")
+    return Object.entries(grouped)
+      .map(([vendedor, prima]) => ({ vendedor, primaNeta: Math.round(prima) }))
+      .sort((a, b) => b.primaNeta - a.primaNeta)
+  } catch { return null }
+}
+
+/**
+ * Fetch aseguradoras ranked by prima
+ */
+export async function getRankedAseguradoras(
+  periodo?: number,
+  año?: string
+): Promise<{ aseguradora: string; primaNeta: number }[] | null> {
+  try {
+    let query = supabase
+      .from("dashboard_data")
+      .select("CiaAbreviacion, PrimaNeta, TCPago, Descuento, FLiquidacion")
+    if (periodo) query = query.eq("Periodo", periodo)
+    if (año) query = query.ilike("FLiquidacion", `%/${año.slice(2)} %`)
+    const { data, error } = await query
+    if (error || !data?.length) return null
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const grouped = groupBySum(data as any[], "CiaAbreviacion")
+    return Object.entries(grouped)
+      .map(([aseguradora, prima]) => ({ aseguradora, primaNeta: Math.round(prima) }))
+      .sort((a, b) => b.primaNeta - a.primaNeta)
+  } catch { return null }
+}
+
+/**
  * Get available periodos from dashboard_data
  */
 export async function getPeriodos(): Promise<number[] | null> {
