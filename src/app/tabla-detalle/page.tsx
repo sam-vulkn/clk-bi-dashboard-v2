@@ -1,11 +1,12 @@
 "use client"
 
-import { useState, useEffect } from "react"
-import { ChevronRight, ChevronLeft, Search } from "lucide-react"
+import { useState, useEffect, useRef } from "react"
+import { ChevronRight, ChevronLeft, Search, Download } from "lucide-react"
 import { PageTabs } from "@/components/page-tabs"
 import { PageFooter } from "@/components/page-footer"
 import { getLineasNegocio, getGerencias, getVendedores, getGrupos, getClientes, getPolizas } from "@/lib/queries"
 import type { PolizaRow } from "@/lib/queries"
+import { exportExcel, exportPDF } from "@/lib/export"
 
 function fmt(v: number) {
   return new Intl.NumberFormat("es-MX", { style: "currency", currency: "MXN", minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(v)
@@ -51,6 +52,7 @@ export default function TablaDetallePage() {
   const [rows, setRows] = useState<SimpleRow[]>([])
   const [polizas, setPolizas] = useState<PolizaRow[]>([])
 
+  const tableRef = useRef<HTMLDivElement>(null)
   useEffect(() => { document.title = "Tabla detalle | CLK BI Dashboard" }, [])
   const periodo = MESES[month] ?? 2
 
@@ -186,6 +188,40 @@ export default function TablaDetallePage() {
   const rowTotal = filteredRows.reduce((s, r) => s + r.primaNeta, 0)
   const polizaTotal = filteredPolizas.reduce((s, p) => s + p.primaNeta, 0)
 
+  const handleExcelExport = () => {
+    const levelName = levelLabels[drillLevel]
+    const filename = `CLK_PrimaNetaCobrada_${levelName.replace(/\s/g, "")}_${year}${month}.xlsx`
+
+    if (drillLevel === "linea") {
+      exportExcel(
+        filteredLineas.map(l => ({ "Línea": l.linea, "Prima neta": l.primaNeta, "Presupuesto": l.presupuesto, "Diferencia": l.diferencia, "% Dif ppto": l.pctDifPpto, "PN año anterior": l.pnAnioAnt, "Dif PN año ant": l.difYoY, "% Dif PN AA": l.pctDifYoY, "Pendiente": l.pendiente })),
+        ["Línea", "Prima neta", "Presupuesto", "Diferencia", "% Dif ppto", "PN año anterior", "Dif PN año ant", "% Dif PN AA", "Pendiente"],
+        ["Línea", "Prima neta", "Presupuesto", "Diferencia", "% Dif ppto", "PN año anterior", "Dif PN año ant", "% Dif PN AA", "Pendiente"],
+        filename
+      )
+    } else if (drillLevel === "poliza") {
+      exportExcel(
+        filteredPolizas.map(p => ({ "Documento": p.documento, "Aseguradora": p.aseguradora, "Ramo": p.ramo, "Subramo": p.subramo, "F. Liquidación": p.fechaLiquidacion, "F. Lím. Pago": p.fechaLimPago, "Prima neta": p.primaNeta })),
+        ["Documento", "Aseguradora", "Ramo", "Subramo", "F. Liquidación", "F. Lím. Pago", "Prima neta"],
+        ["Documento", "Aseguradora", "Ramo", "Subramo", "F. Liquidación", "F. Lím. Pago", "Prima neta"],
+        filename
+      )
+    } else {
+      exportExcel(
+        filteredRows.map(r => ({ [levelName]: r.name, "Prima neta": r.primaNeta })),
+        [levelName, "Prima neta"],
+        [levelName, "Prima neta"],
+        filename
+      )
+    }
+  }
+
+  const handlePDFExport = () => {
+    if (!tableRef.current) return
+    const filters = `${month} ${year} | Nivel: ${levelLabels[drillLevel]} | ${crumbs.map(c => c.label).join(" > ") || "Todas las líneas"}`
+    exportPDF(tableRef.current, "Prima Neta Cobrada", filters)
+  }
+
   return (
     <div>
       <PageTabs />
@@ -205,6 +241,13 @@ export default function TablaDetallePage() {
               {b.label}
             </button>
           ))}
+          <span className="w-px h-5 bg-[#E5E7E9] mx-1" />
+          <button onClick={handleExcelExport} className="flex items-center gap-1 px-2.5 py-1.5 rounded text-[11px] font-medium border border-[#041224] text-[#041224] hover:bg-[#F5F5F5] transition-colors">
+            <Download className="w-3 h-3" /> Excel
+          </button>
+          <button onClick={handlePDFExport} className="flex items-center gap-1 px-2.5 py-1.5 rounded text-[11px] font-medium border border-[#041224] text-[#041224] hover:bg-[#F5F5F5] transition-colors">
+            <Download className="w-3 h-3" /> PDF
+          </button>
         </div>
       </div>
 
@@ -250,7 +293,7 @@ export default function TablaDetallePage() {
       </div>
 
       {/* Table */}
-      <div className="bi-card overflow-hidden overflow-x-auto">
+      <div ref={tableRef} className="bi-card overflow-hidden overflow-x-auto">
         <table className="w-full text-[10px]">
           <thead>
             {drillLevel === "linea" ? (
