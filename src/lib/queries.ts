@@ -208,6 +208,95 @@ export async function getGrupos(
 }
 
 /**
+ * Fetch clientes for a given grupo + vendedor + gerencia + línea
+ */
+export async function getClientes(
+  grupo: string,
+  vendedor: string,
+  gerencia: string,
+  linea: string,
+  periodo?: number,
+  año?: string
+): Promise<{ cliente: string; primaNeta: number }[] | null> {
+  try {
+    let query = supabase
+      .from("dashboard_data")
+      .select("NombreCompleto, PrimaNeta, TCPago, Descuento, FLiquidacion")
+      .eq("Grupo", grupo)
+      .eq("VendNombre", vendedor)
+      .eq("GerenciaNombre", gerencia)
+      .eq("LBussinesNombre", linea)
+
+    if (periodo) query = query.eq("Periodo", periodo)
+    if (año) query = query.ilike("FLiquidacion", `%/${año.slice(2)} %`)
+
+    const { data, error } = await query
+    if (error || !data?.length) return null
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const grouped = groupBySum(data as any[], "NombreCompleto")
+    return Object.entries(grouped)
+      .map(([cliente, prima]) => ({ cliente, primaNeta: Math.round(prima) }))
+      .sort((a, b) => b.primaNeta - a.primaNeta)
+  } catch {
+    return null
+  }
+}
+
+/**
+ * Fetch pólizas for a given cliente + grupo + vendedor + gerencia + línea
+ */
+export interface PolizaRow {
+  documento: string
+  aseguradora: string
+  ramo: string
+  subramo: string
+  fechaLiquidacion: string
+  fechaLimPago: string
+  primaNeta: number
+}
+
+export async function getPolizas(
+  cliente: string,
+  grupo: string,
+  vendedor: string,
+  gerencia: string,
+  linea: string,
+  periodo?: number,
+  año?: string
+): Promise<PolizaRow[] | null> {
+  try {
+    let query = supabase
+      .from("dashboard_data")
+      .select("Documento, CiaAbreviacion, RamosNombre, Sub_Ramo, FLiquidacion, FLimPago, PrimaNeta, TCPago, Descuento")
+      .eq("NombreCompleto", cliente)
+      .eq("Grupo", grupo)
+      .eq("VendNombre", vendedor)
+      .eq("GerenciaNombre", gerencia)
+      .eq("LBussinesNombre", linea)
+
+    if (periodo) query = query.eq("Periodo", periodo)
+    if (año) query = query.ilike("FLiquidacion", `%/${año.slice(2)} %`)
+
+    const { data, error } = await query
+    if (error || !data?.length) return null
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    return (data as any[]).map(row => ({
+      documento: (row.Documento as string) || "",
+      aseguradora: (row.CiaAbreviacion as string) || "",
+      ramo: (row.RamosNombre as string) || "",
+      subramo: (row.Sub_Ramo as string) || "",
+      fechaLiquidacion: (row.FLiquidacion as string) || "",
+      fechaLimPago: (row.FLimPago as string) || "",
+      primaNeta: Math.round(calcPrima(row)),
+    })).sort((a, b) => b.primaNeta - a.primaNeta)
+  } catch {
+    return null
+  }
+}
+
+/**
  * Get available periodos from dashboard_data
  */
 export async function getPeriodos(): Promise<number[] | null> {

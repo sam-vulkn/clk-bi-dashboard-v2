@@ -1,10 +1,11 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { ChevronRight, ChevronDown, ChevronLeft, Search } from "lucide-react"
+import { ChevronRight, ChevronLeft, Search } from "lucide-react"
 import { PageTabs } from "@/components/page-tabs"
 import { PageFooter } from "@/components/page-footer"
-import { getLineasNegocio, getGerencias, getVendedores, getGrupos } from "@/lib/queries"
+import { getLineasNegocio, getGerencias, getVendedores, getGrupos, getClientes, getPolizas } from "@/lib/queries"
+import type { PolizaRow } from "@/lib/queries"
 
 function fmt(v: number) {
   return new Intl.NumberFormat("es-MX", { style: "currency", currency: "MXN", minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(v)
@@ -15,7 +16,6 @@ const MESES: Record<string, number> = {
   Julio: 7, Agosto: 8, Septiembre: 9, Octubre: 10, Noviembre: 11, Diciembre: 12,
 }
 
-// Seed with all 9 columns
 interface LineaFull {
   linea: string; primaNeta: number; presupuesto: number; diferencia: number; pctDifPpto: number; pnAnioAnt: number; difYoY: number; pctDifYoY: number; pendiente: number
 }
@@ -27,13 +27,12 @@ const SEED: LineaFull[] = [
   { linea: "Call Center", primaNeta: 2602364, presupuesto: 6398081, diferencia: -3795717, pctDifPpto: -59.3, pnAnioAnt: 853685, difYoY: 1748679, pctDifYoY: 204.84, pendiente: 12236199 },
 ]
 
-type DrillLevel = "linea" | "gerencia" | "vendedor" | "grupo"
+type DrillLevel = "linea" | "gerencia" | "vendedor" | "grupo" | "cliente" | "poliza"
 
-interface Breadcrumb {
-  linea?: string
-  gerencia?: string
-  vendedor?: string
-}
+interface Crumb { level: DrillLevel; label: string }
+
+// Simple row for levels 2-5 (name + primaNeta)
+interface SimpleRow { name: string; primaNeta: number }
 
 export default function TablaDetallePage() {
   const [year, setYear] = useState("2026")
@@ -43,24 +42,23 @@ export default function TablaDetallePage() {
 
   // Drill state
   const [drillLevel, setDrillLevel] = useState<DrillLevel>("linea")
-  const [breadcrumb, setBreadcrumb] = useState<Breadcrumb>({})
+  const [crumbs, setCrumbs] = useState<Crumb[]>([])
+  // Selections for building queries deeper
+  const [sel, setSel] = useState<{ linea?: string; gerencia?: string; vendedor?: string; grupo?: string; cliente?: string }>({})
 
-  // Data per level
+  // Data
   const [lineas, setLineas] = useState<LineaFull[]>(SEED)
-  const [gerencias, setGerencias] = useState<{ gerencia: string; primaNeta: number }[]>([])
-  const [vendedores, setVendedores] = useState<{ vendedor: string; primaNeta: number }[]>([])
-  const [grupos, setGrupos] = useState<{ grupo: string; cliente: string; primaNeta: number }[]>([])
+  const [rows, setRows] = useState<SimpleRow[]>([])
+  const [polizas, setPolizas] = useState<PolizaRow[]>([])
 
   useEffect(() => { document.title = "Tabla detalle | CLK BI Dashboard" }, [])
-
   const periodo = MESES[month] ?? 2
 
-  // Load líneas on mount / filter change
+  // Load líneas
   useEffect(() => {
     let cancelled = false
     setLoading(true)
-    setDrillLevel("linea")
-    setBreadcrumb({})
+    setDrillLevel("linea"); setCrumbs([]); setSel({})
 
     const load = async () => {
       try {
@@ -68,150 +66,140 @@ export default function TablaDetallePage() {
         if (!cancelled) {
           if (result && result.length > 0) {
             setLineas(result.map(r => ({ linea: r.linea, primaNeta: r.primaNeta, presupuesto: 0, diferencia: 0, pctDifPpto: 0, pnAnioAnt: 0, difYoY: 0, pctDifYoY: 0, pendiente: 0 })))
-          } else {
-            setLineas(SEED)
-          }
+          } else { setLineas(SEED) }
           setLoading(false)
         }
-      } catch {
-        if (!cancelled) { setLineas(SEED); setLoading(false) }
-      }
+      } catch { if (!cancelled) { setLineas(SEED); setLoading(false) } }
     }
-
-    const killSwitch = setTimeout(() => {
-      if (!cancelled) { cancelled = true; setLineas(SEED); setLoading(false) }
-    }, 3000)
-
+    const ks = setTimeout(() => { if (!cancelled) { cancelled = true; setLineas(SEED); setLoading(false) } }, 3000)
     load()
-    return () => { cancelled = true; clearTimeout(killSwitch) }
+    return () => { cancelled = true; clearTimeout(ks) }
   }, [periodo, year])
 
-  // Drill into a línea → show gerencias
-  const drillToGerencias = async (linea: string) => {
+  // Generic drill function
+  const drill = async (level: DrillLevel, label: string, newSel: typeof sel) => {
     setLoading(true)
-    setBreadcrumb({ linea })
-    const data = await getGerencias(linea, periodo, year)
-    setGerencias(data ?? [])
-    setDrillLevel("gerencia")
-    setLoading(false)
-  }
+    setSel(newSel)
+    setCrumbs(prev => [...prev, { level: drillLevel, label }])
 
-  // Drill into a gerencia → show vendedores
-  const drillToVendedores = async (gerencia: string) => {
-    setLoading(true)
-    setBreadcrumb(prev => ({ ...prev, gerencia }))
-    const data = await getVendedores(gerencia, breadcrumb.linea!, periodo, year)
-    setVendedores(data ?? [])
-    setDrillLevel("vendedor")
-    setLoading(false)
-  }
-
-  // Drill into a vendedor → show grupos
-  const drillToGrupos = async (vendedor: string) => {
-    setLoading(true)
-    setBreadcrumb(prev => ({ ...prev, vendedor }))
-    const data = await getGrupos(vendedor, breadcrumb.gerencia!, breadcrumb.linea!, periodo, year)
-    setGrupos(data ?? [])
-    setDrillLevel("grupo")
-    setLoading(false)
-  }
-
-  // Navigate back one level
-  const goBack = () => {
-    if (drillLevel === "grupo") {
-      setBreadcrumb(prev => ({ linea: prev.linea, gerencia: prev.gerencia }))
-      setDrillLevel("vendedor")
-    } else if (drillLevel === "vendedor") {
-      setBreadcrumb(prev => ({ linea: prev.linea }))
-      setDrillLevel("gerencia")
-    } else if (drillLevel === "gerencia") {
-      setBreadcrumb({})
-      setDrillLevel("linea")
-    }
-  }
-
-  // Navigate to specific level via breadcrumb
-  const goToLevel = (level: DrillLevel) => {
-    if (level === "linea") {
-      setBreadcrumb({})
-      setDrillLevel("linea")
-    } else if (level === "gerencia" && breadcrumb.linea) {
-      setBreadcrumb({ linea: breadcrumb.linea })
-      drillToGerencias(breadcrumb.linea)
-    } else if (level === "vendedor" && breadcrumb.gerencia) {
-      setBreadcrumb({ linea: breadcrumb.linea, gerencia: breadcrumb.gerencia })
-      drillToVendedores(breadcrumb.gerencia)
-    }
-  }
-
-  // Tab quick-access: jump to flat view at that level
-  const jumpToTab = async (level: DrillLevel) => {
-    if (level === "linea") {
-      setBreadcrumb({})
-      setDrillLevel("linea")
-    } else if (level === "gerencia") {
-      // Show all gerencias for selected línea, or first línea
-      const linea = breadcrumb.linea || lineas[0]?.linea
-      if (linea) await drillToGerencias(linea)
-    } else if (level === "vendedor") {
-      // Need a gerencia context — if we have one, use it
-      if (breadcrumb.gerencia && breadcrumb.linea) {
-        await drillToVendedores(breadcrumb.gerencia)
-      } else if (breadcrumb.linea) {
-        // First drill to gerencias, then user picks
-        await drillToGerencias(breadcrumb.linea)
+    try {
+      if (level === "gerencia") {
+        const data = await getGerencias(newSel.linea!, periodo, year)
+        setRows((data ?? []).map(d => ({ name: d.gerencia, primaNeta: d.primaNeta })))
+      } else if (level === "vendedor") {
+        const data = await getVendedores(newSel.gerencia!, newSel.linea!, periodo, year)
+        setRows((data ?? []).map(d => ({ name: d.vendedor, primaNeta: d.primaNeta })))
+      } else if (level === "grupo") {
+        const data = await getGrupos(newSel.vendedor!, newSel.gerencia!, newSel.linea!, periodo, year)
+        setRows((data ?? []).map(d => ({ name: d.grupo, primaNeta: d.primaNeta })))
+      } else if (level === "cliente") {
+        const data = await getClientes(newSel.grupo!, newSel.vendedor!, newSel.gerencia!, newSel.linea!, periodo, year)
+        setRows((data ?? []).map(d => ({ name: d.cliente, primaNeta: d.primaNeta })))
+      } else if (level === "poliza") {
+        const data = await getPolizas(newSel.cliente!, newSel.grupo!, newSel.vendedor!, newSel.gerencia!, newSel.linea!, periodo, year)
+        setPolizas(data ?? [])
       }
+    } catch { setRows([]); setPolizas([]) }
+
+    setDrillLevel(level)
+    setLoading(false)
+  }
+
+  const goBack = () => {
+    if (crumbs.length === 0) return
+    const prev = crumbs[crumbs.length - 1]
+    setCrumbs(c => c.slice(0, -1))
+
+    // Restore selection
+    if (prev.level === "linea") {
+      setDrillLevel("linea"); setSel({})
+    } else {
+      // Re-drill to the previous level
+      const newCrumbs = crumbs.slice(0, -1)
+      // Reconstruct sel from crumbs
+      const newSel: typeof sel = {}
+      const levels: DrillLevel[] = ["linea", "gerencia", "vendedor", "grupo", "cliente", "poliza"]
+      const selKeys = ["linea", "gerencia", "vendedor", "grupo", "cliente"] as const
+      for (let i = 0; i < newCrumbs.length; i++) {
+        const idx = levels.indexOf(newCrumbs[i].level)
+        if (idx >= 0 && idx < selKeys.length) {
+          (newSel as Record<string, string>)[selKeys[idx]] = newCrumbs[i].label
+        }
+      }
+      // Also include the "prev" level's label as sel
+      const prevIdx = levels.indexOf(prev.level)
+      if (prevIdx > 0 && prevIdx - 1 < selKeys.length) {
+        // prev.level is what we're going BACK to
+      }
+      drill(prev.level, "", { ...newSel }).then(() => {
+        setCrumbs(newCrumbs)
+      })
+      return
     }
   }
 
-  // Search filtering
+  const goToCrumb = (idx: number) => {
+    if (idx < 0) { setDrillLevel("linea"); setCrumbs([]); setSel({}); return }
+    // Reconstruct and re-drill
+    const target = crumbs[idx]
+    const newCrumbs = crumbs.slice(0, idx)
+    const levels: DrillLevel[] = ["linea", "gerencia", "vendedor", "grupo", "cliente"]
+    const selKeys = ["linea", "gerencia", "vendedor", "grupo", "cliente"] as const
+    const newSel: typeof sel = {}
+    for (const c of newCrumbs) {
+      const li = levels.indexOf(c.level)
+      if (li >= 0 && li < selKeys.length) (newSel as Record<string, string>)[selKeys[li]] = c.label
+    }
+    const nextLevel = levels[levels.indexOf(target.level) + 1] || target.level
+    drill(nextLevel as DrillLevel, target.label, { ...newSel, [selKeys[levels.indexOf(target.level)]]: target.label }).then(() => {
+      setCrumbs([...newCrumbs, target])
+    })
+  }
+
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const applySearch = <T,>(items: T[], key: string): T[] => {
+  const filterSearch = <T,>(items: T[], key: string): T[] => {
     if (!search) return items
     return items.filter(item => String((item as any)[key]).toLowerCase().includes(search.toLowerCase()))
   }
 
-  // Compute totals for línea level
-  const filteredLineas = applySearch(lineas, "linea")
-  const totalLineas = {
-    primaNeta: filteredLineas.reduce((s, l) => s + l.primaNeta, 0),
-    presupuesto: filteredLineas.reduce((s, l) => s + l.presupuesto, 0),
-    pnAnioAnt: filteredLineas.reduce((s, l) => s + l.pnAnioAnt, 0),
-    pendiente: filteredLineas.reduce((s, l) => s + l.pendiente, 0),
+  // Column label for current level
+  const levelLabels: Record<DrillLevel, string> = {
+    linea: "Línea de negocio", gerencia: "Gerencia", vendedor: "Vendedor",
+    grupo: "Grupo", cliente: "Cliente / Asegurado", poliza: "Póliza",
   }
+
+  const filteredLineas = filterSearch(lineas, "linea")
+  const totalLineas = { primaNeta: filteredLineas.reduce((s, l) => s + l.primaNeta, 0), presupuesto: filteredLineas.reduce((s, l) => s + l.presupuesto, 0), pnAnioAnt: filteredLineas.reduce((s, l) => s + l.pnAnioAnt, 0), pendiente: filteredLineas.reduce((s, l) => s + l.pendiente, 0) }
   const totalDif = filteredLineas.reduce((s, l) => s + l.diferencia, 0)
   const totalDifPct = totalLineas.presupuesto > 0 ? ((totalDif / totalLineas.presupuesto) * 100).toFixed(1) : ""
   const totalDifYoy = filteredLineas.reduce((s, l) => s + l.difYoY, 0)
   const totalDifYoyPct = totalLineas.pnAnioAnt > 0 ? ((totalDifYoy / totalLineas.pnAnioAnt) * 100).toFixed(2) : ""
 
   const drillTabs: { level: DrillLevel; label: string }[] = [
-    { level: "linea", label: "Línea de negocio" },
+    { level: "linea", label: "Línea" },
     { level: "gerencia", label: "Gerencia" },
     { level: "vendedor", label: "Vendedor" },
   ]
 
-  // Column header label changes per level
-  const firstColLabel = drillLevel === "linea" ? "Línea de negocio"
-    : drillLevel === "gerencia" ? "Gerencia"
-    : drillLevel === "vendedor" ? "Vendedor"
-    : "Grupo / Cliente"
+  const filteredRows = filterSearch(rows, "name")
+  const filteredPolizas = filterSearch(polizas, "documento")
+  const rowTotal = filteredRows.reduce((s, r) => s + r.primaNeta, 0)
+  const polizaTotal = filteredPolizas.reduce((s, p) => s + p.primaNeta, 0)
 
   return (
     <div>
       <PageTabs />
 
       {/* Title + drill tabs */}
-      <div className="flex items-center justify-between mb-3">
+      <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
         <h1 className="text-base font-bold text-[#111] font-lato">Prima neta cobrada</h1>
         <div className="flex items-center gap-1.5">
           {drillTabs.map(b => (
             <button
               key={b.level}
-              onClick={() => jumpToTab(b.level)}
+              onClick={() => { if (b.level === "linea") { setDrillLevel("linea"); setCrumbs([]); setSel({}) } }}
               className={`px-3 py-1.5 rounded text-[11px] font-medium transition-colors ${
-                drillLevel === b.level || (drillLevel === "grupo" && b.level === "vendedor")
-                  ? "bg-[#041224] text-white"
-                  : "bg-[#FDECEA] text-[#041224]"
+                drillLevel === b.level ? "bg-[#041224] text-white" : "bg-[#FDECEA] text-[#041224]"
               }`}
             >
               {b.label}
@@ -220,48 +208,22 @@ export default function TablaDetallePage() {
         </div>
       </div>
 
-      {/* Breadcrumb + Back */}
-      {drillLevel !== "linea" && (
-        <div className="flex items-center gap-2 mb-3">
-          <button
-            onClick={goBack}
-            className="flex items-center gap-1 text-xs text-[#041224] hover:text-[#E62800] transition-colors font-medium"
-          >
-            <ChevronLeft className="w-4 h-4" />
-            Atrás
+      {/* Breadcrumb */}
+      {crumbs.length > 0 && (
+        <div className="flex items-center gap-2 mb-3 flex-wrap">
+          <button onClick={goBack} className="flex items-center gap-1 text-xs text-[#041224] hover:text-[#E62800] transition-colors font-medium">
+            <ChevronLeft className="w-4 h-4" /> Atrás
           </button>
-          <div className="flex items-center gap-1 text-xs text-[#888]">
-            <button onClick={() => goToLevel("linea")} className="hover:text-[#041224] transition-colors underline">
-              Líneas
-            </button>
-            {breadcrumb.linea && (
-              <>
+          <div className="flex items-center gap-1 text-xs text-[#888] flex-wrap">
+            <button onClick={() => { setDrillLevel("linea"); setCrumbs([]); setSel({}) }} className="hover:text-[#041224] underline">Líneas</button>
+            {crumbs.map((c, i) => (
+              <span key={i} className="flex items-center gap-1">
                 <ChevronRight className="w-3 h-3" />
-                <button
-                  onClick={() => goToLevel("gerencia")}
-                  className={`transition-colors ${drillLevel === "gerencia" ? "text-[#041224] font-semibold" : "hover:text-[#041224] underline"}`}
-                >
-                  {breadcrumb.linea}
+                <button onClick={() => goToCrumb(i)} className={`transition-colors ${i === crumbs.length - 1 ? "text-[#041224] font-semibold" : "hover:text-[#041224] underline"}`}>
+                  {c.label}
                 </button>
-              </>
-            )}
-            {breadcrumb.gerencia && (
-              <>
-                <ChevronRight className="w-3 h-3" />
-                <button
-                  onClick={() => goToLevel("vendedor")}
-                  className={`transition-colors ${drillLevel === "vendedor" ? "text-[#041224] font-semibold" : "hover:text-[#041224] underline"}`}
-                >
-                  {breadcrumb.gerencia}
-                </button>
-              </>
-            )}
-            {breadcrumb.vendedor && (
-              <>
-                <ChevronRight className="w-3 h-3" />
-                <span className="text-[#041224] font-semibold">{breadcrumb.vendedor}</span>
-              </>
-            )}
+              </span>
+            ))}
           </div>
         </div>
       )}
@@ -291,67 +253,64 @@ export default function TablaDetallePage() {
       <div className="bi-card overflow-hidden overflow-x-auto">
         <table className="w-full text-[10px]">
           <thead>
-            <tr className="bg-[#041224] text-white border-b-2 border-b-[#E62800]">
-              {drillLevel === "linea" && <th className="w-6 px-1 py-2"></th>}
-              <th className="text-left px-2 py-2 font-semibold">{firstColLabel}</th>
-              <th className="text-right px-2 py-2 font-semibold">Prima neta</th>
-              {drillLevel === "linea" && (
-                <>
-                  <th className="text-right px-2 py-2 font-semibold">Presupuesto</th>
-                  <th className="text-right px-2 py-2 font-semibold">Diferencia</th>
-                  <th className="text-right px-2 py-2 font-semibold">% Dif ppto</th>
-                  <th className="text-right px-2 py-2 font-semibold">PN año anterior *</th>
-                  <th className="text-right px-2 py-2 font-semibold">Dif PN año ant</th>
-                  <th className="text-right px-2 py-2 font-semibold">% Dif PN AA</th>
-                  <th className="text-right px-2 py-2 font-semibold">Pendiente</th>
-                </>
-              )}
-              {drillLevel === "grupo" && (
-                <th className="text-left px-2 py-2 font-semibold">Cliente</th>
-              )}
-            </tr>
+            {drillLevel === "linea" ? (
+              <tr className="bg-[#041224] text-white border-b-2 border-b-[#E62800]">
+                <th className="w-6 px-1 py-2"></th>
+                <th className="text-left px-2 py-2 font-semibold">Línea de negocio</th>
+                <th className="text-right px-2 py-2 font-semibold">Prima neta</th>
+                <th className="text-right px-2 py-2 font-semibold">Presupuesto</th>
+                <th className="text-right px-2 py-2 font-semibold">Diferencia</th>
+                <th className="text-right px-2 py-2 font-semibold">% Dif ppto</th>
+                <th className="text-right px-2 py-2 font-semibold">PN año anterior *</th>
+                <th className="text-right px-2 py-2 font-semibold">Dif PN año ant</th>
+                <th className="text-right px-2 py-2 font-semibold">% Dif PN AA</th>
+                <th className="text-right px-2 py-2 font-semibold">Pendiente</th>
+              </tr>
+            ) : drillLevel === "poliza" ? (
+              <tr className="bg-[#041224] text-white border-b-2 border-b-[#E62800]">
+                <th className="text-left px-2 py-2 font-semibold">Documento</th>
+                <th className="text-left px-2 py-2 font-semibold">Aseguradora</th>
+                <th className="text-left px-2 py-2 font-semibold">Ramo</th>
+                <th className="text-left px-2 py-2 font-semibold">Subramo</th>
+                <th className="text-left px-2 py-2 font-semibold">F. Liquidación</th>
+                <th className="text-left px-2 py-2 font-semibold">F. Lím. Pago</th>
+                <th className="text-right px-2 py-2 font-semibold">Prima neta</th>
+              </tr>
+            ) : (
+              <tr className="bg-[#041224] text-white border-b-2 border-b-[#E62800]">
+                <th className="w-6 px-1 py-2"></th>
+                <th className="text-left px-2 py-2 font-semibold">{levelLabels[drillLevel]}</th>
+                <th className="text-right px-2 py-2 font-semibold">Prima neta</th>
+              </tr>
+            )}
           </thead>
           <tbody>
             {loading ? (
               <tr><td colSpan={10} className="px-3 py-8 text-center text-gray-400">Cargando...</td></tr>
+
             ) : drillLevel === "linea" ? (
-              /* ─── LEVEL 1: LÍNEAS ─── */
+              /* ─── LEVEL 1: LÍNEAS (9 columns) ─── */
               <>
                 {filteredLineas.map((l, idx) => {
                   const dif = l.diferencia
                   const difYoy = l.difYoY
                   const isCritical = l.presupuesto > 0 && l.pctDifPpto < -15
-
                   return (
-                    <tr
-                      key={l.linea}
-                      className={`border-b border-[#F0F0F0] cursor-pointer hover:bg-[#FFF5F5] transition-colors ${isCritical ? "bg-[#FFF2F2]" : idx % 2 === 1 ? "bg-[#FAFAFA]" : "bg-white"}`}
-                      onClick={() => drillToGerencias(l.linea)}
-                    >
-                      <td className="px-1 py-1.5 text-center">
-                        <ChevronRight className="w-3.5 h-3.5 text-[#E62800] inline" />
-                      </td>
+                    <tr key={l.linea} className={`border-b border-[#F0F0F0] cursor-pointer hover:bg-[#FFF5F5] transition-colors ${isCritical ? "bg-[#FFF2F2]" : idx % 2 === 1 ? "bg-[#FAFAFA]" : "bg-white"}`}
+                      onClick={() => drill("gerencia", l.linea, { linea: l.linea })}>
+                      <td className="px-1 py-1.5 text-center"><ChevronRight className="w-3.5 h-3.5 text-[#E62800] inline" /></td>
                       <td className="px-2 py-1.5 font-medium text-[#111]">{l.linea}</td>
                       <td className="px-2 py-1.5 text-right font-medium">{fmt(l.primaNeta)}</td>
                       <td className="px-2 py-1.5 text-right text-gray-500">{l.presupuesto ? fmt(l.presupuesto) : ""}</td>
-                      <td className={`px-2 py-1.5 text-right font-medium ${dif < 0 ? "text-[#E62800]" : "text-[#166534]"}`}>
-                        {l.presupuesto ? (dif < 0 ? `(${fmt(Math.abs(dif))})` : fmt(dif)) : ""}
-                      </td>
-                      <td className={`px-2 py-1.5 text-right ${dif < 0 ? "text-[#E62800]" : "text-[#166534]"}`}>
-                        {l.pctDifPpto ? `${l.pctDifPpto > 0 ? "+" : ""}${l.pctDifPpto}%` : ""}
-                      </td>
+                      <td className={`px-2 py-1.5 text-right font-medium ${dif < 0 ? "text-[#E62800]" : "text-[#166534]"}`}>{l.presupuesto ? (dif < 0 ? `(${fmt(Math.abs(dif))})` : fmt(dif)) : ""}</td>
+                      <td className={`px-2 py-1.5 text-right ${dif < 0 ? "text-[#E62800]" : "text-[#166534]"}`}>{l.pctDifPpto ? `${l.pctDifPpto > 0 ? "+" : ""}${l.pctDifPpto}%` : ""}</td>
                       <td className="px-2 py-1.5 text-right text-gray-500">{l.pnAnioAnt ? fmt(l.pnAnioAnt) : ""}</td>
-                      <td className={`px-2 py-1.5 text-right font-medium ${difYoy < 0 ? "text-[#E62800]" : "text-[#166534]"}`}>
-                        {l.pnAnioAnt ? (difYoy < 0 ? `(${fmt(Math.abs(difYoy))})` : fmt(difYoy)) : ""}
-                      </td>
-                      <td className={`px-2 py-1.5 text-right ${difYoy < 0 ? "text-[#E62800]" : "text-[#166534]"}`}>
-                        {l.pctDifYoY ? `${l.pctDifYoY > 0 ? "+" : ""}${l.pctDifYoY}%` : ""}
-                      </td>
+                      <td className={`px-2 py-1.5 text-right font-medium ${difYoy < 0 ? "text-[#E62800]" : "text-[#166534]"}`}>{l.pnAnioAnt ? (difYoy < 0 ? `(${fmt(Math.abs(difYoy))})` : fmt(difYoy)) : ""}</td>
+                      <td className={`px-2 py-1.5 text-right ${difYoy < 0 ? "text-[#E62800]" : "text-[#166534]"}`}>{l.pctDifYoY ? `${l.pctDifYoY > 0 ? "+" : ""}${l.pctDifYoY}%` : ""}</td>
                       <td className="px-2 py-1.5 text-right text-gray-500">{l.pendiente ? fmt(l.pendiente) : ""}</td>
                     </tr>
                   )
                 })}
-                {/* TOTAL row */}
                 <tr className="bg-[#041224] text-white border-t-2 cursor-default">
                   <td className="px-1 py-2"></td>
                   <td className="px-2 py-2 font-bold">Total</td>
@@ -365,74 +324,66 @@ export default function TablaDetallePage() {
                   <td className="px-2 py-2 text-right font-bold">{totalLineas.pendiente ? fmt(totalLineas.pendiente) : ""}</td>
                 </tr>
               </>
-            ) : drillLevel === "gerencia" ? (
-              /* ─── LEVEL 2: GERENCIAS ─── */
+
+            ) : drillLevel === "poliza" ? (
+              /* ─── LEVEL 6: PÓLIZAS ─── */
               <>
-                {applySearch(gerencias, "gerencia").length === 0 ? (
-                  <tr><td colSpan={3} className="px-3 py-8 text-center text-gray-400">Sin datos de gerencias para &quot;{breadcrumb.linea}&quot; en {month} {year}</td></tr>
-                ) : applySearch(gerencias, "gerencia").map((g, idx) => (
-                  <tr
-                    key={g.gerencia}
-                    className={`border-b border-[#F0F0F0] cursor-pointer hover:bg-[#FFF5F5] transition-colors ${idx % 2 === 1 ? "bg-[#FAFAFA]" : "bg-white"}`}
-                    onClick={() => drillToVendedores(g.gerencia)}
-                  >
-                    <td className="px-2 py-1.5 font-medium text-[#111]">
-                      <ChevronRight className="w-3 h-3 text-[#E62800] inline mr-1" />
-                      {g.gerencia}
-                    </td>
-                    <td className="px-2 py-1.5 text-right font-medium">{fmt(g.primaNeta)}</td>
+                {filteredPolizas.length === 0 ? (
+                  <tr><td colSpan={7} className="px-3 py-8 text-center text-[#888]">Datos en integración</td></tr>
+                ) : filteredPolizas.map((p, idx) => (
+                  <tr key={`${p.documento}-${idx}`} className={`border-b border-[#F0F0F0] hover:bg-[#FFF5F5] ${idx % 2 === 1 ? "bg-[#FAFAFA]" : "bg-white"}`}>
+                    <td className="px-2 py-1.5 font-medium text-[#111]">{p.documento}</td>
+                    <td className="px-2 py-1.5 text-[#333]">{p.aseguradora}</td>
+                    <td className="px-2 py-1.5 text-[#333]">{p.ramo}</td>
+                    <td className="px-2 py-1.5 text-[#666]">{p.subramo}</td>
+                    <td className="px-2 py-1.5 text-[#666]">{p.fechaLiquidacion}</td>
+                    <td className="px-2 py-1.5 text-[#666]">{p.fechaLimPago}</td>
+                    <td className={`px-2 py-1.5 text-right font-medium ${p.primaNeta < 0 ? "text-[#E62800]" : ""}`}>{p.primaNeta < 0 ? `(${fmt(Math.abs(p.primaNeta))})` : fmt(p.primaNeta)}</td>
                   </tr>
                 ))}
-                {/* TOTAL */}
                 <tr className="bg-[#041224] text-white border-t-2 cursor-default">
-                  <td className="px-2 py-2 font-bold">Total</td>
-                  <td className="px-2 py-2 text-right font-bold">{fmt(gerencias.reduce((s, g) => s + g.primaNeta, 0))}</td>
+                  <td className="px-2 py-2 font-bold" colSpan={6}>Total</td>
+                  <td className="px-2 py-2 text-right font-bold">{fmt(polizaTotal)}</td>
                 </tr>
               </>
-            ) : drillLevel === "vendedor" ? (
-              /* ─── LEVEL 3: VENDEDORES ─── */
-              <>
-                {applySearch(vendedores, "vendedor").length === 0 ? (
-                  <tr><td colSpan={3} className="px-3 py-8 text-center text-gray-400">Sin datos de vendedores para &quot;{breadcrumb.gerencia}&quot; en {month} {year}</td></tr>
-                ) : applySearch(vendedores, "vendedor").map((v, idx) => (
-                  <tr
-                    key={v.vendedor}
-                    className={`border-b border-[#F0F0F0] cursor-pointer hover:bg-[#FFF5F5] transition-colors ${idx % 2 === 1 ? "bg-[#FAFAFA]" : "bg-white"}`}
-                    onClick={() => drillToGrupos(v.vendedor)}
-                  >
-                    <td className="px-2 py-1.5 font-medium text-[#111]">
-                      <ChevronRight className="w-3 h-3 text-[#E62800] inline mr-1" />
-                      {v.vendedor}
-                    </td>
-                    <td className="px-2 py-1.5 text-right font-medium">{fmt(v.primaNeta)}</td>
-                  </tr>
-                ))}
-                {/* TOTAL */}
-                <tr className="bg-[#041224] text-white border-t-2 cursor-default">
-                  <td className="px-2 py-2 font-bold">Total</td>
-                  <td className="px-2 py-2 text-right font-bold">{fmt(vendedores.reduce((s, v) => s + v.primaNeta, 0))}</td>
-                </tr>
-              </>
+
             ) : (
-              /* ─── LEVEL 4: GRUPOS ─── */
+              /* ─── LEVELS 2-5: GENERIC (name + primaNeta) ─── */
               <>
-                {applySearch(grupos, "grupo").length === 0 ? (
-                  <tr><td colSpan={3} className="px-3 py-8 text-center text-gray-400">Sin datos de grupos para &quot;{breadcrumb.vendedor}&quot; en {month} {year}</td></tr>
-                ) : applySearch(grupos, "grupo").map((g, idx) => (
-                  <tr
-                    key={g.grupo}
-                    className={`border-b border-[#F0F0F0] hover:bg-[#FFF5F5] transition-colors ${idx % 2 === 1 ? "bg-[#FAFAFA]" : "bg-white"}`}
-                  >
-                    <td className="px-2 py-1.5 font-medium text-[#111]">{g.grupo}</td>
-                    <td className="px-2 py-1.5 text-right font-medium">{fmt(g.primaNeta)}</td>
-                    <td className="px-2 py-1.5 text-[#666] text-[9px]">{g.cliente}</td>
-                  </tr>
-                ))}
-                {/* TOTAL */}
+                {filteredRows.length === 0 ? (
+                  <tr><td colSpan={3} className="px-3 py-8 text-center text-[#888]">
+                    {drillLevel === "cliente" || drillLevel === "grupo" ? "Datos en integración" : `Sin datos para ${month} ${year}`}
+                  </td></tr>
+                ) : filteredRows.map((r, idx) => {
+                  // Determine next level
+                  const nextLevel: DrillLevel | null =
+                    drillLevel === "gerencia" ? "vendedor" :
+                    drillLevel === "vendedor" ? "grupo" :
+                    drillLevel === "grupo" ? "cliente" :
+                    drillLevel === "cliente" ? "poliza" : null
+                  const selKey =
+                    drillLevel === "gerencia" ? "gerencia" :
+                    drillLevel === "vendedor" ? "vendedor" :
+                    drillLevel === "grupo" ? "grupo" :
+                    drillLevel === "cliente" ? "cliente" : null
+
+                  return (
+                    <tr key={r.name} className={`border-b border-[#F0F0F0] ${nextLevel ? "cursor-pointer" : ""} hover:bg-[#FFF5F5] transition-colors ${idx % 2 === 1 ? "bg-[#FAFAFA]" : "bg-white"}`}
+                      onClick={() => nextLevel && selKey && drill(nextLevel, r.name, { ...sel, [selKey]: r.name })}>
+                      <td className="px-1 py-1.5 text-center">
+                        {nextLevel && <ChevronRight className="w-3 h-3 text-[#E62800] inline" />}
+                      </td>
+                      <td className="px-2 py-1.5 font-medium text-[#111]">{r.name}</td>
+                      <td className={`px-2 py-1.5 text-right font-medium ${r.primaNeta < 0 ? "text-[#E62800]" : ""}`}>
+                        {r.primaNeta < 0 ? `(${fmt(Math.abs(r.primaNeta))})` : fmt(r.primaNeta)}
+                      </td>
+                    </tr>
+                  )
+                })}
                 <tr className="bg-[#041224] text-white border-t-2 cursor-default">
+                  <td className="px-1 py-2"></td>
                   <td className="px-2 py-2 font-bold">Total</td>
-                  <td className="px-2 py-2 text-right font-bold">{fmt(grupos.reduce((s, g) => s + g.primaNeta, 0))}</td>
-                  <td className="px-2 py-2"></td>
+                  <td className="px-2 py-2 text-right font-bold">{fmt(rowTotal)}</td>
                 </tr>
               </>
             )}
