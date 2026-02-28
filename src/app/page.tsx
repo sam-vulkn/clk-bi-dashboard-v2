@@ -332,43 +332,33 @@ export default function HomePage() {
         </div>
       </div>
 
-      {/* Bottom: Cards (35%) + Bar chart (65%) */}
-      <div className="grid grid-cols-1 xl:grid-cols-[35%_1fr] gap-3 flex-shrink-0">
-        <div className="flex flex-col gap-2">
-          {/* Cumplimiento — RED number per original */}
-          <div className="bi-card border-l-4 border-l-[#C00000] p-3">
-            <div className="text-[9px] text-gray-500 font-medium uppercase tracking-wide mb-0.5">
-              Cumplimiento del presupuesto
-            </div>
-            <div className="text-[46px] leading-none font-bold text-[#C00000] font-lato">{Math.round(animCumplimiento)}%</div>
-          </div>
-
-          {/* Crecimiento */}
-          {/* Crecimiento — green bg, white number */}
-          <div className="bi-card p-3" style={{ background: "#375623" }}>
-            <div className="text-[9px] text-white/70 font-medium uppercase tracking-wide mb-0.5">
-              Crecimiento vs año anterior *
-            </div>
-            <div className="text-[46px] leading-none font-bold text-white font-lato">
-              {displayCrecimiento >= 0 ? "↑" : "↓"} {Math.abs(animCrecimiento).toFixed(1)}%
-            </div>
-          </div>
-
-          {/* Tipo de cambio */}
-          <div className="bi-card p-2.5">
-            <div className="text-[9px] text-gray-400 uppercase tracking-wide font-bold mb-1">Tipo de cambio</div>
-            <div className="flex items-center gap-3 text-xs">
-              <div className="flex items-center gap-1">
-                <span className="text-[#375623] font-medium text-[12px]">Dólar</span>
-                <span className="text-[#111] font-bold text-[12px]">${fx.usd}</span>
-              </div>
-              <div className="flex items-center gap-1">
-                <span className="text-gray-500 text-[12px]">Peso Dominicano</span>
-                <span className="text-[#111] font-bold text-[12px]">${fx.dop}</span>
-              </div>
-            </div>
+      {/* Bottom: 3 KPI cards + Bar chart */}
+      <div className="grid grid-cols-3 gap-3 mt-3 flex-shrink-0">
+        {/* Card 76% */}
+        <div className="bg-white rounded shadow-sm p-4 border-l-4 border-[#E62800]">
+          <p className="text-[#CCD1D3] text-[10px] uppercase tracking-wide font-bold">Cumplimiento del presupuesto</p>
+          <p className="text-[#E62800] text-[46px] font-black leading-none mt-1">{Math.round(animCumplimiento)}%</p>
+        </div>
+        {/* Card 10.8% */}
+        <div className="bg-[#041224] rounded shadow-sm p-4">
+          <p className="text-[#CCD1D3] text-[10px] uppercase tracking-wide font-bold">Crecimiento vs año anterior *</p>
+          <p className="text-white text-[46px] font-black leading-none mt-1">
+            {displayCrecimiento >= 0 ? "↑" : "↓"} {Math.abs(animCrecimiento).toFixed(1)}%
+          </p>
+        </div>
+        {/* Tipo de cambio */}
+        <div className="bg-white rounded shadow-sm p-4 border border-[#E5E7E9]">
+          <p className="text-[#CCD1D3] text-[10px] uppercase tracking-wide font-bold">Tipo de cambio</p>
+          <div className="flex items-center gap-3 mt-2">
+            <span className="text-[#041224] text-sm">Dólar <strong>${fx.usd}</strong></span>
+            <span className="text-[#CCD1D3]">|</span>
+            <span className="text-[#041224] text-sm">Peso Dom. <strong>${fx.dop}</strong></span>
           </div>
         </div>
+      </div>
+
+      {/* Bar chart full width */}
+      <div className="mt-3 flex-shrink-0">
 
         {/* Horizontal bar chart */}
         <div className="bi-card p-4">

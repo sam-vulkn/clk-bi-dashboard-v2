@@ -11,26 +11,21 @@ export function PageFooter({ showFootnote = false }: { showFootnote?: boolean })
   }, [])
 
   return (
-    <footer className="mt-8 pt-4 border-t border-[#E5E7EB] flex items-center justify-between text-[10px]">
+    <footer className="mt-8 pt-4 border-t border-[#E5E7E9] bg-white px-4 py-3 flex items-center justify-between text-[10px] rounded-b">
       <div className="flex items-center gap-3">
-        {/* IntraClick logo */}
-        <div className="flex items-center gap-1.5 bg-[#1a1a2e] rounded px-2.5 py-1.5">
-          <svg viewBox="0 0 16 16" className="w-3.5 h-3.5" fill="none">
-            <circle cx="8" cy="8" r="6" stroke="#E8735A" strokeWidth="1.5" />
-            <circle cx="8" cy="8" r="2.5" fill="#E8735A" />
-          </svg>
-          <span className="text-white text-[9px] font-bold tracking-wide">INTRA</span>
-          <span className="text-[#E8735A] text-[9px] font-bold tracking-wide">CLICK</span>
+        {/* ClickSEGUROS logo text */}
+        <div className="text-[#E62800] font-black text-xs tracking-tight">
+          Click<span className="text-[#041224]">SEGUROS</span>
         </div>
         {showFootnote && (
-          <span className="text-[9px] text-gray-500 italic">
+          <span className="text-[9px] text-[#CCD1D3] italic">
             * El total de la prima neta del año anterior está al corte del día: 26/febrero/2025
           </span>
         )}
       </div>
-      <div className="text-gray-500 text-right leading-tight">
+      <div className="text-[#CCD1D3] text-right leading-tight">
         <div>Fecha de actualización.</div>
-        <div className="font-semibold text-[#111]">{now}</div>
+        <div className="font-semibold text-[#041224]">{now}</div>
       </div>
     </footer>
   )
