@@ -169,6 +169,14 @@ export default function HomePage() {
   const animPeso = useCountUp(fx.dop, 1000)
 
   const totalAnioAnt = lineas.reduce((s, l) => s + l.anioAnterior, 0)
+  // Forecast: (Prima actual / días transcurridos) × días totales del mes
+  const now = new Date()
+  const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate()
+  const daysPassed = now.getDate()
+  const forecastTotal = daysPassed > 0 ? (total / daysPassed) * daysInMonth : total
+  const forecastM = Math.round(forecastTotal / 1e6 * 10) / 10 || 0
+  const forecastMeetsBudget = forecastTotal >= totalPpto
+
   const rawGaugeVal = selected
     ? Math.round((lineas.find(l => l.nombre === selected)?.primaNeta ?? total) / 1e6 * 10) / 10
     : Math.round(total / 1e6 * 10) / 10
@@ -219,7 +227,12 @@ export default function HomePage() {
         <div className="grid grid-cols-[45%_55%] gap-0">
           {/* LEFT — Gauge */}
           <div className="p-3 flex items-center justify-center">
-            <Gauge value={gaugeVal} prevYear={gaugePrevYear} budget={gaugeBudget} />
+            <div>
+              <Gauge value={gaugeVal} prevYear={gaugePrevYear} budget={gaugeBudget} />
+              <div className={`text-center text-[12px] font-semibold mt-1 ${forecastMeetsBudget ? "text-[#2E7D32]" : "text-[#E62800]"}`}>
+                Proyección al cierre: ${forecastM}M
+              </div>
+            </div>
           </div>
 
           {/* RIGHT — Accordion Table */}
