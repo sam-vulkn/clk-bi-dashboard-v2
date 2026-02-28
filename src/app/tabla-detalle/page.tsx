@@ -40,6 +40,7 @@ export default function TablaDetallePage() {
   const [month, setMonth] = useState("Febrero")
   const [search, setSearch] = useState("")
   const [loading, setLoading] = useState(true)
+  const [compareMode, setCompareMode] = useState<"yoy" | "mom" | "qoq" | "ytd">("yoy")
 
   // Drill state
   const [drillLevel, setDrillLevel] = useState<DrillLevel>("linea")
@@ -188,6 +189,15 @@ export default function TablaDetallePage() {
   const rowTotal = filteredRows.reduce((s, r) => s + r.primaNeta, 0)
   const polizaTotal = filteredPolizas.reduce((s, p) => s + p.primaNeta, 0)
 
+  // Compare mode labels
+  const compareLabels = {
+    yoy: { col: "PN año anterior *", difCol: "Dif PN año ant", pctCol: "% Dif PN AA" },
+    mom: { col: "PN mes anterior", difCol: "Dif PN mes ant", pctCol: "% Dif mes ant" },
+    qoq: { col: "PN trim. anterior", difCol: "Dif PN trim ant", pctCol: "% Dif trim ant" },
+    ytd: { col: "YTD año anterior", difCol: "Dif YTD", pctCol: "% Dif YTD" },
+  }
+  const cmpLabel = compareLabels[compareMode]
+
   const handleExcelExport = () => {
     const levelName = levelLabels[drillLevel]
     const filename = `CLK_PrimaNetaCobrada_${levelName.replace(/\s/g, "")}_${year}${month}.xlsx`
@@ -276,13 +286,22 @@ export default function TablaDetallePage() {
         <div className="flex items-center gap-1.5 text-xs">
           <label className="text-gray-500 font-medium">Año</label>
           <select value={year} onChange={e => setYear(e.target.value)} className="border border-[#E5E7EB] rounded px-2 py-1 text-xs bg-white">
-            <option>2026</option><option>2025</option>
+            <option>2026</option><option>2025</option><option>2024</option>
           </select>
         </div>
         <div className="flex items-center gap-1.5 text-xs">
           <label className="text-gray-500 font-medium">Mes</label>
           <select value={month} onChange={e => setMonth(e.target.value)} className="border border-[#E5E7EB] rounded px-2 py-1 text-xs bg-white">
             {Object.keys(MESES).map(m => <option key={m}>{m}</option>)}
+          </select>
+        </div>
+        <div className="flex items-center gap-1.5 text-xs">
+          <label className="text-gray-500 font-medium">Comparar</label>
+          <select value={compareMode} onChange={e => setCompareMode(e.target.value as typeof compareMode)} className="border border-[#E5E7EB] rounded px-2 py-1 text-xs bg-white">
+            <option value="yoy">Vs Año Anterior</option>
+            <option value="mom">Vs Mes Anterior</option>
+            <option value="qoq">Vs Trimestre Anterior</option>
+            <option value="ytd">YTD vs YTD</option>
           </select>
         </div>
         <div className="relative ml-auto">
@@ -304,9 +323,9 @@ export default function TablaDetallePage() {
                 <th className="text-right px-2 py-2 font-semibold">Presupuesto</th>
                 <th className="text-right px-2 py-2 font-semibold">Diferencia</th>
                 <th className="text-right px-2 py-2 font-semibold">% Dif ppto</th>
-                <th className="text-right px-2 py-2 font-semibold">PN año anterior *</th>
-                <th className="text-right px-2 py-2 font-semibold">Dif PN año ant</th>
-                <th className="text-right px-2 py-2 font-semibold">% Dif PN AA</th>
+                <th className="text-right px-2 py-2 font-semibold">{cmpLabel.col}</th>
+                <th className="text-right px-2 py-2 font-semibold">{cmpLabel.difCol}</th>
+                <th className="text-right px-2 py-2 font-semibold">{cmpLabel.pctCol}</th>
                 <th className="text-right px-2 py-2 font-semibold">Pendiente</th>
               </tr>
             ) : drillLevel === "poliza" ? (
