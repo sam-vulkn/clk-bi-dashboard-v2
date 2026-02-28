@@ -13,12 +13,13 @@ export function Gauge({ value, prevYear = 88.9, budget = 129.5 }: GaugeProps) {
   const startTime = useRef(0)
   const rafRef = useRef(0)
 
+  // Dynamic range: always show value within arc
   const min = 0
-  const max = Math.round(budget * 1.15)
+  const maxVal = Math.max(budget * 1.1, value * 1.2, prevYear * 1.3)
+  const max = Math.ceil(maxVal / 5) * 5 // Round up to nearest 5
 
-  const cx = 220, cy = 220
-  const rOuter = 190, rInner = 140
-  const bezelR = rOuter + 6
+  const cx = 200, cy = 180
+  const rOuter = 160, rInner = 115
 
   const valueToAngle = (v: number) => {
     const clamped = Math.max(min, Math.min(max, v))
@@ -64,82 +65,90 @@ export function Gauge({ value, prevYear = 88.9, budget = 129.5 }: GaugeProps) {
     return `M${x1o},${y1o} A${rOut},${rOut} 0 ${large} 1 ${x2o},${y2o} L${x1i},${y1i} A${rIn},${rIn} 0 ${large} 0 ${x2i},${y2i} Z`
   }
 
-  const needleLength = rOuter - 10
+  const needleLength = rOuter - 8
   const nRad = ((animatedAngle - 90) * Math.PI) / 180
   const tipX = cx + needleLength * Math.cos(nRad)
   const tipY = cy + needleLength * Math.sin(nRad)
   const perpRad = nRad + Math.PI / 2
-  const bw = 3.5
+  const bw = 3
   const b1x = cx + bw * Math.cos(perpRad), b1y = cy + bw * Math.sin(perpRad)
   const b2x = cx - bw * Math.cos(perpRad), b2y = cy - bw * Math.sin(perpRad)
 
-  // Boundary markers
+  // Zone boundary markers
   const markers = [
-    { val: prevYear, label: `$${prevYear}M`, color: "#E62800" },
-    { val: budget, label: `$${budget}M`, color: "#2E7D32" },
+    { val: prevYear, label: `$${prevYear}M`, sublabel: "Año ant.", color: "#E62800" },
+    { val: budget, label: `$${budget}M`, sublabel: "Meta", color: "#2E7D32" },
   ]
 
+  // Min/Max labels
+  const minLabel = `$${min}M`
+  const maxLabel = `$${max}M`
+
   return (
-    <div className="w-full flex flex-col items-center" style={{ minHeight: 280 }}>
-      <svg viewBox="0 0 440 260" className="w-full" style={{ overflow: "visible" }}>
+    <div className="w-full flex flex-col items-center">
+      <svg viewBox="0 0 400 220" className="w-full max-w-[320px]" style={{ overflow: "visible" }}>
         <defs>
-          <radialGradient id="pivotGrad" cx="50%" cy="40%" r="50%">
-            <stop offset="0%" stopColor="#FFFFFF" />
-            <stop offset="60%" stopColor="#E0E0E0" />
-            <stop offset="100%" stopColor="#B0B0B0" />
-          </radialGradient>
           <filter id="needleShadow">
-            <feDropShadow dx="1" dy="1" stdDeviation="1.5" floodOpacity="0.3" />
+            <feDropShadow dx="1" dy="1" stdDeviation="1.5" floodOpacity="0.25" />
+          </filter>
+          <filter id="arcShadow">
+            <feDropShadow dx="0" dy="2" stdDeviation="3" floodOpacity="0.15" />
           </filter>
         </defs>
 
-        {/* Thin bezel */}
-        <path d={arcPath(0, 180, bezelR, rOuter + 1)} fill="#5A5A5A" />
+        {/* Background arc shadow */}
+        <path d={arcPath(0, 180, rOuter + 2, rInner - 2)} fill="#E5E7E9" filter="url(#arcShadow)" />
 
         {/* 3 Zone arcs */}
         {zones.map((z, i) => (
-          <path key={i} d={arcPath(z.start, z.end, rOuter, rInner)} fill={z.color} opacity={0.85} />
+          <path key={i} d={arcPath(z.start, z.end, rOuter, rInner)} fill={z.color} opacity={0.9} />
         ))}
 
-        {/* Boundary markers — thin lines with labels OUTSIDE */}
+        {/* Zone boundary markers */}
         {markers.map((m, i) => {
           const pct = (m.val - min) / (max - min)
           const deg = pct * 180
           const rad = ((deg - 90) * Math.PI) / 180
-          const x1 = cx + rOuter * Math.cos(rad), y1 = cy + rOuter * Math.sin(rad)
-          const x2 = cx + rInner * Math.cos(rad), y2 = cy + rInner * Math.sin(rad)
-          const labelR = rOuter + 20
+          const x1 = cx + (rOuter + 2) * Math.cos(rad), y1 = cy + (rOuter + 2) * Math.sin(rad)
+          const x2 = cx + (rInner - 2) * Math.cos(rad), y2 = cy + (rInner - 2) * Math.sin(rad)
+          const labelR = rOuter + 18
           const lx = cx + labelR * Math.cos(rad), ly = cy + labelR * Math.sin(rad)
           return (
             <g key={`marker-${i}`}>
-              <line x1={x1} y1={y1} x2={x2} y2={y2} stroke="#333" strokeWidth="1.5" />
-              <text x={lx} y={ly} fontSize="9" fill={m.color} textAnchor="middle" dominantBaseline="middle" fontWeight="bold">
+              <line x1={x1} y1={y1} x2={x2} y2={y2} stroke="white" strokeWidth="2.5" />
+              <text x={lx} y={ly - 5} fontSize="8" fill={m.color} textAnchor="middle" dominantBaseline="middle" fontWeight="700">
                 {m.label}
+              </text>
+              <text x={lx} y={ly + 5} fontSize="6" fill="#999" textAnchor="middle" dominantBaseline="middle">
+                {m.sublabel}
               </text>
             </g>
           )
         })}
 
-        {/* Needle — thinner, refined */}
+        {/* Min/Max labels */}
+        <text x={cx - rOuter - 5} y={cy + 12} fontSize="8" fill="#CCC" textAnchor="end">{minLabel}</text>
+        <text x={cx + rOuter + 5} y={cy + 12} fontSize="8" fill="#CCC" textAnchor="start">{maxLabel}</text>
+
+        {/* Needle */}
         <polygon
           points={`${tipX},${tipY} ${b1x},${b1y} ${b2x},${b2y}`}
-          fill="#3D3D3D"
+          fill="#1A1A1A"
           filter="url(#needleShadow)"
         />
 
         {/* Pivot */}
-        <circle cx={cx} cy={cy} r={14} fill="url(#pivotGrad)" stroke="#999" strokeWidth="1" />
-        <circle cx={cx} cy={cy} r={5} fill="#888" />
-      </svg>
+        <circle cx={cx} cy={cy} r={10} fill="#333" />
+        <circle cx={cx} cy={cy} r={4} fill="#666" />
 
-      <div className="text-center -mt-6">
-        <div className="text-[48px] font-black text-[#041224] leading-none">
-          ${value.toFixed(1)}M
-        </div>
-        <div className="text-[13px] text-gray-400 mt-1">
+        {/* Center value — big and bold INSIDE the arc */}
+        <text x={cx} y={cy - 20} fontSize="36" fill="#041224" textAnchor="middle" fontWeight="900" fontFamily="Lato, sans-serif">
+          ${value < 1000 ? value.toFixed(1) : Math.round(value)}M
+        </text>
+        <text x={cx} y={cy - 2} fontSize="10" fill="#999" textAnchor="middle">
           de ${budget}M presupuesto
-        </div>
-      </div>
+        </text>
+      </svg>
     </div>
   )
 }
