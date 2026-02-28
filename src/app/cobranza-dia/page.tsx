@@ -66,15 +66,15 @@ export default function CobranzaDiaPage() {
 
       {/* Cards */}
       <div className="grid grid-cols-3 gap-3 mb-4">
-        <div className="bi-card border-l-4 border-l-[#E8735A] p-3">
+        <div className="bi-card border-l-4 border-l-[#E62800] p-3">
           <div className="text-[9px] text-gray-500 uppercase tracking-wide font-medium mb-1">Meta del día</div>
           <div className="text-2xl font-bold text-[#111] font-lato">{fmt(metaTotal / data.length)}</div>
         </div>
-        <div className="bi-card border-l-4 border-l-[#375623] p-3">
+        <div className="bi-card border-l-4 border-l-[#041224] p-3">
           <div className="text-[9px] text-gray-500 uppercase tracking-wide font-medium mb-1">Cobrado hoy</div>
-          <div className="text-2xl font-bold text-[#375623] font-lato">{fmt(data[data.length - 1]?.prima_cobrada ?? 0)}</div>
+          <div className="text-2xl font-bold text-[#166534] font-lato">{fmt(data[data.length - 1]?.prima_cobrada ?? 0)}</div>
         </div>
-        <div className="bi-card p-3" style={{ background: "#375623" }}>
+        <div className="bi-card p-3" style={{ background: "#041224" }}>
           <div className="text-[9px] text-white/70 uppercase tracking-wide font-medium mb-1">Cumplimiento diario</div>
           <div className="text-2xl font-bold text-white font-lato">{cumplimiento}%</div>
           <div className="text-[10px] text-white/60 mt-0.5">Acumulado: {fmt(lastAcumulado)}</div>
@@ -91,7 +91,7 @@ export default function CobranzaDiaPage() {
             <YAxis fontSize={10} tick={{ fill: "#666" }} tickFormatter={v => `$${v}M`} />
             <Tooltip formatter={(v: unknown) => [`$${v}M`]} />
             <Line type="monotone" dataKey="cobrado" stroke="#111111" strokeWidth={2} dot={{ r: 3 }} name="Cobrado" />
-            <Line type="monotone" dataKey="meta" stroke="#999999" strokeWidth={2} strokeDasharray="5 5" dot={false} name="Meta" />
+            <Line type="monotone" dataKey="meta" stroke="#E62800" strokeWidth={2} strokeDasharray="5 5" dot={false} name="Meta" />
           </LineChart>
         </ResponsiveContainer>
       </div>
@@ -100,7 +100,7 @@ export default function CobranzaDiaPage() {
       <div className="bi-card overflow-hidden">
         <table className="w-full text-xs">
           <thead>
-            <tr className="bg-[#F5F5F5] border-b-2 border-b-[#C00000]">
+            <tr className="bg-[#041224] text-white border-b-2 border-b-[#E62800]">
               <th className="text-left px-3 py-2 font-semibold text-gray-600">Fecha</th>
               <th className="text-left px-3 py-2 font-semibold text-gray-600">Gerencia</th>
               <th className="text-right px-3 py-2 font-semibold text-gray-600">Prima cobrada</th>
@@ -120,10 +120,10 @@ export default function CobranzaDiaPage() {
                   <td className="px-3 py-1.5 font-medium text-[#111]">{r.gerencia}</td>
                   <td className="px-3 py-1.5 text-right font-medium">{fmt(r.prima_cobrada)}</td>
                   <td className="px-3 py-1.5 text-right text-gray-500">{fmt(r.meta_dia)}</td>
-                  <td className={`px-3 py-1.5 text-right font-medium ${neg ? "text-[#C00000]" : "text-[#375623]"}`}>
+                  <td className={`px-3 py-1.5 text-right font-medium ${neg ? "text-[#E62800]" : "text-[#166534]"}`}>
                     {neg ? `(${fmt(Math.abs(r.diferencia))})` : fmt(r.diferencia)}
                   </td>
-                  <td className={`px-3 py-1.5 text-right ${pct < 100 ? "text-[#C00000]" : "text-[#375623]"}`}>{pct}%</td>
+                  <td className={`px-3 py-1.5 text-right ${pct < 100 ? "text-[#E62800]" : "text-[#166534]"}`}>{pct}%</td>
                   <td className="px-3 py-1.5 text-right text-gray-500">{fmt(r.acumulado)}</td>
                 </tr>
               )

@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect, useCallback } from "react"
-import { SlidersHorizontal, Maximize2 } from "lucide-react"
+
 import { PageTabs } from "@/components/page-tabs"
 import { PageFooter } from "@/components/page-footer"
 import { useCountUp } from "@/lib/use-count-up"
@@ -97,13 +97,13 @@ export default function CompromisosPage() {
 
       {/* Summary cards */}
       <div className="grid grid-cols-3 gap-3 mb-4">
-        <div className="bi-card border-l-4 border-l-[#C00000] p-3">
+        <div className="bi-card border-l-4 border-l-[#E62800] p-3">
           <div className="text-[9px] text-gray-500 uppercase tracking-wide font-medium mb-1">Prima neta total</div>
           <div className="text-2xl font-bold text-[#111] font-lato">${Math.round(animTotal)}M</div>
           <div className="text-[10px] text-gray-400 mt-0.5">{data.length} gerencias</div>
         </div>
         {!isReal && (
-          <div className="bi-card border-l-4 border-l-[#E8735A] p-3">
+          <div className="bi-card border-l-4 border-l-[#041224] p-3">
             <div className="text-[9px] text-gray-500 uppercase tracking-wide font-medium mb-1">Total convenio</div>
             <div className="text-2xl font-bold text-[#111] font-lato">{fmt(totalConv)}</div>
           </div>
@@ -120,15 +120,13 @@ export default function CompromisosPage() {
       {/* Toolbar */}
       <div className="flex items-center justify-end gap-2 mb-2">
         <span className="text-xs text-gray-400">Actualizado: 27/02/2026</span>
-        <button className="text-gray-400 hover:text-[#111]"><SlidersHorizontal className="w-4 h-4" /></button>
-        <button onClick={() => document.documentElement.requestFullscreen?.()} className="text-gray-400 hover:text-[#111]"><Maximize2 className="w-4 h-4" /></button>
       </div>
 
       {/* Table */}
       <div className="bi-card overflow-hidden">
         <table className="w-full text-xs">
           <thead>
-            <tr className="bg-[#2D2D2D] text-white border-b-2 border-b-[#C00000]">
+            <tr className="bg-[#041224] text-white border-b-2 border-b-[#E62800]">
               <th className="text-left px-3 py-2 font-semibold">Gerencia</th>
               <th className="text-right px-3 py-2 font-semibold">Prima neta</th>
               {!isReal && <th className="text-right px-3 py-2 font-semibold">Convenio</th>}
@@ -151,7 +149,7 @@ export default function CompromisosPage() {
                 </tr>
               )
             })}
-            <tr className="bg-black text-white border-t-2">
+            <tr className="bg-[#041224] text-white border-t-2">
               <td className="px-3 py-2 font-bold">TOTAL</td>
               <td className="px-3 py-2 text-right font-bold">{fmt(totalPN)}</td>
               {!isReal && <td className="px-3 py-2 text-right font-bold">{totalConv ? fmt(totalConv) : ""}</td>}

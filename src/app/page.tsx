@@ -56,8 +56,8 @@ function PresupuestoCell({ value, onChange }: { value: number; onChange: (v: num
               if (e.key === "Escape") setEditing(false)
             }}
           />
-          <button onClick={() => { onChange(parseFloat(draft) || value); setEditing(false) }} className="text-[#375623]"><Check className="w-3 h-3" /></button>
-          <button onClick={() => setEditing(false)} className="text-[#C00000]"><X className="w-3 h-3" /></button>
+          <button onClick={() => { onChange(parseFloat(draft) || value); setEditing(false) }} className="text-[#166534]"><Check className="w-3 h-3" /></button>
+          <button onClick={() => setEditing(false)} className="text-[#E62800]"><X className="w-3 h-3" /></button>
         </div>
       </td>
     )
@@ -221,7 +221,7 @@ export default function HomePage() {
           <div className="border-l border-[#F0F0F0] overflow-y-auto" style={{ maxHeight: 320 }}>
             <table className="w-full text-xs">
               <thead className="sticky top-0 z-10">
-                <tr className="bg-black text-white border-b-2 border-b-[#C00000]">
+                <tr className="bg-[#041224] text-white border-b-2 border-b-[#E62800]">
                   <th className="text-left px-1 py-2 font-semibold w-6"></th>
                   <th className="text-left px-2 py-2 font-semibold text-[10px]">Línea</th>
                   <th className="text-right px-2 py-2 font-semibold text-[10px]">Prima neta</th>
@@ -261,7 +261,7 @@ export default function HomePage() {
                         <td className="px-2 py-1.5 text-right font-medium text-[10px]">{fmt(l.primaNeta)}</td>
                         <td className="px-2 py-1.5 text-right text-gray-500 text-[10px]">{l.anioAnterior ? fmt(l.anioAnterior) : ""}</td>
                         <PresupuestoCell value={l.presupuesto} onChange={v => updatePresupuesto(l.nombre, v)} />
-                        <td className={`px-2 py-1.5 text-right text-[10px] font-medium ${(l.primaNeta - l.presupuesto) < 0 ? "text-[#C00000]" : "text-[#375623]"}`}>
+                        <td className={`px-2 py-1.5 text-right text-[10px] font-medium ${(l.primaNeta - l.presupuesto) < 0 ? "text-[#E62800]" : "text-[#166534]"}`}>
                           {l.presupuesto ? ((l.primaNeta - l.presupuesto) < 0 ? `(${fmt(Math.abs(l.primaNeta - l.presupuesto))})` : fmt(l.primaNeta - l.presupuesto)) : ""}
                         </td>
                       </tr>
@@ -315,7 +315,7 @@ export default function HomePage() {
                 })}
                 {/* TOTAL */}
                 {!loading && (
-                  <tr className="bg-black text-white sticky bottom-0 cursor-default">
+                  <tr className="bg-[#041224] text-white sticky bottom-0 cursor-default">
                     <td className="px-1 py-2"></td>
                     <td className="px-2 py-2 font-bold text-[10px]">Total</td>
                     <td className="px-2 py-2 text-right font-bold text-[10px]">{fmt(total)}</td>

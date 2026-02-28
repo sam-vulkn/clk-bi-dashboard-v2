@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { ChevronRight, ChevronDown, Search, SlidersHorizontal, Maximize2, Pencil } from "lucide-react"
+import { ChevronRight, ChevronDown, Search } from "lucide-react"
 import { PageTabs } from "@/components/page-tabs"
 import { PageFooter } from "@/components/page-footer"
 import { getLineasNegocio, getGerencias, getVendedores } from "@/lib/queries"
@@ -141,8 +141,8 @@ export default function TablaDetallePage() {
               onClick={() => setDrillLevel(b.level)}
               className={`px-3 py-1.5 rounded text-[11px] font-medium transition-colors ${
                 drillLevel === b.level
-                  ? "bg-[#1A1A1A] text-white"
-                  : "bg-[#FEE2E2] text-[#666]"
+                  ? "bg-[#041224] text-white"
+                  : "bg-[#E5E7E9] text-[#041224]"
               }`}
             >
               {b.label}
@@ -169,19 +169,15 @@ export default function TablaDetallePage() {
           <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" />
           <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Buscar..." className="pl-7 pr-3 py-1 border border-[#E5E7EB] rounded text-xs w-44 bg-white" />
         </div>
-        <button onClick={() => { setShowToast(true); setTimeout(() => setShowToast(false), 2000) }} className="text-gray-400 hover:text-[#111]" title="Editar"><Pencil className="w-4 h-4" /></button>
-        <span className="text-xs text-gray-400">Actualizado: 27/02/2026</span>
-        <button className="text-gray-400 hover:text-[#111]" title="Columnas"><SlidersHorizontal className="w-4 h-4" /></button>
-        <button onClick={() => document.documentElement.requestFullscreen?.()} className="text-gray-400 hover:text-[#111]" title="Pantalla completa"><Maximize2 className="w-4 h-4" /></button>
+        <span className="text-xs text-[#CCD1D3]">Actualizado: 27/02/2026</span>
       </div>
 
-      {showToast && <div className="fixed top-4 right-4 bg-[#111] text-white px-4 py-2 rounded shadow-lg text-xs z-50 animate-pulse">Modo edición</div>}
 
       {/* Table — all 9 columns */}
       <div className="bi-card overflow-hidden overflow-x-auto">
         <table className="w-full text-[10px]">
           <thead>
-            <tr className="bg-[#2D2D2D] text-white border-b-2 border-b-[#C00000]">
+            <tr className="bg-[#041224] text-white border-b-2 border-b-[#E62800]">
               <th className="w-6 px-1 py-2"></th>
               <th className="text-left px-2 py-2 font-semibold">Línea de negocio</th>
               <th className="text-right px-2 py-2 font-semibold">Prima neta</th>
@@ -221,17 +217,17 @@ export default function TablaDetallePage() {
                     <td className="px-2 py-1.5 font-medium text-[#111]">{l.linea}</td>
                     <td className="px-2 py-1.5 text-right font-medium">{fmt(l.primaNeta)}</td>
                     <td className="px-2 py-1.5 text-right text-gray-500">{l.presupuesto ? fmt(l.presupuesto) : ""}</td>
-                    <td className={`px-2 py-1.5 text-right font-medium ${dif < 0 ? "text-[#C00000]" : "text-[#375623]"}`}>
+                    <td className={`px-2 py-1.5 text-right font-medium ${dif < 0 ? "text-[#E62800]" : "text-[#166534]"}`}>
                       {l.presupuesto ? (dif < 0 ? `(${fmt(Math.abs(dif))})` : fmt(dif)) : ""}
                     </td>
-                    <td className={`px-2 py-1.5 text-right ${dif < 0 ? "text-[#C00000]" : "text-[#375623]"}`}>
+                    <td className={`px-2 py-1.5 text-right ${dif < 0 ? "text-[#E62800]" : "text-[#166534]"}`}>
                       {difPct ? `${difPct > 0 ? "+" : ""}${difPct}%` : ""}
                     </td>
                     <td className="px-2 py-1.5 text-right text-gray-500">{l.pnAnioAnt ? fmt(l.pnAnioAnt) : ""}</td>
-                    <td className={`px-2 py-1.5 text-right font-medium ${difYoy < 0 ? "text-[#C00000]" : "text-[#375623]"}`}>
+                    <td className={`px-2 py-1.5 text-right font-medium ${difYoy < 0 ? "text-[#E62800]" : "text-[#166534]"}`}>
                       {l.pnAnioAnt ? (difYoy < 0 ? `(${fmt(Math.abs(difYoy))})` : fmt(difYoy)) : ""}
                     </td>
-                    <td className={`px-2 py-1.5 text-right ${difYoy < 0 ? "text-[#C00000]" : "text-[#375623]"}`}>
+                    <td className={`px-2 py-1.5 text-right ${difYoy < 0 ? "text-[#E62800]" : "text-[#166534]"}`}>
                       {difYoyPct ? `${difYoyPct > 0 ? "+" : ""}${difYoyPct}%` : ""}
                     </td>
                     <td className="px-2 py-1.5 text-right text-gray-500">{l.pendiente ? fmt(l.pendiente) : ""}</td>
@@ -269,7 +265,7 @@ export default function TablaDetallePage() {
 
             {/* TOTAL — white text on black, negatives stay white */}
             {!loading && (
-              <tr className="bg-black text-white border-t-2 border-t-black cursor-default">
+              <tr className="bg-[#041224] text-white border-t-2 cursor-default">
                 <td className="px-1 py-2"></td>
                 <td className="px-2 py-2 font-bold">Total</td>
                 <td className="px-2 py-2 text-right font-bold">{fmt(total.primaNeta)}</td>
