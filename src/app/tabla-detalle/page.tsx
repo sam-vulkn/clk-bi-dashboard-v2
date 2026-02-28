@@ -80,7 +80,7 @@ export default function TablaDetallePage() {
 
     const killSwitch = setTimeout(() => {
       if (!cancelled) { cancelled = true; setLineas(SEED); setLoading(false) }
-    }, 1500)
+    }, 3000)
 
     load()
     return () => { cancelled = true; clearTimeout(killSwitch) }
@@ -369,7 +369,7 @@ export default function TablaDetallePage() {
               /* ─── LEVEL 2: GERENCIAS ─── */
               <>
                 {applySearch(gerencias, "gerencia").length === 0 ? (
-                  <tr><td colSpan={3} className="px-3 py-8 text-center text-gray-400">Sin datos de gerencias para esta línea</td></tr>
+                  <tr><td colSpan={3} className="px-3 py-8 text-center text-gray-400">Sin datos de gerencias para &quot;{breadcrumb.linea}&quot; en {month} {year}</td></tr>
                 ) : applySearch(gerencias, "gerencia").map((g, idx) => (
                   <tr
                     key={g.gerencia}
@@ -393,7 +393,7 @@ export default function TablaDetallePage() {
               /* ─── LEVEL 3: VENDEDORES ─── */
               <>
                 {applySearch(vendedores, "vendedor").length === 0 ? (
-                  <tr><td colSpan={3} className="px-3 py-8 text-center text-gray-400">Sin datos de vendedores para esta gerencia</td></tr>
+                  <tr><td colSpan={3} className="px-3 py-8 text-center text-gray-400">Sin datos de vendedores para &quot;{breadcrumb.gerencia}&quot; en {month} {year}</td></tr>
                 ) : applySearch(vendedores, "vendedor").map((v, idx) => (
                   <tr
                     key={v.vendedor}
@@ -417,7 +417,7 @@ export default function TablaDetallePage() {
               /* ─── LEVEL 4: GRUPOS ─── */
               <>
                 {applySearch(grupos, "grupo").length === 0 ? (
-                  <tr><td colSpan={3} className="px-3 py-8 text-center text-gray-400">Sin datos de grupos para este vendedor</td></tr>
+                  <tr><td colSpan={3} className="px-3 py-8 text-center text-gray-400">Sin datos de grupos para &quot;{breadcrumb.vendedor}&quot; en {month} {year}</td></tr>
                 ) : applySearch(grupos, "grupo").map((g, idx) => (
                   <tr
                     key={g.grupo}
