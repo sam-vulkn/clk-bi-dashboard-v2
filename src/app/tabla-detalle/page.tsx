@@ -40,6 +40,8 @@ export default function TablaDetallePage() {
   const [drillLevel, setDrillLevel] = useState<DrillLevel>("linea")
   const [fetchKey, setFetchKey] = useState(0)
 
+  useEffect(() => { document.title = "Tabla detalle | CLK BI Dashboard" }, [])
+
   // Accordion
   const [expanded, setExpanded] = useState<Record<string, boolean>>({})
   const [gerenciasData, setGerenciasData] = useState<Record<string, { gerencia: string; primaNeta: number }[]>>({})
@@ -285,7 +287,7 @@ export default function TablaDetallePage() {
         </table>
       </div>
 
-      <PageFooter />
+      <PageFooter showFootnote />
     </div>
   )
 }

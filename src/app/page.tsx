@@ -79,6 +79,7 @@ function PresupuestoCell({ value, onChange }: { value: number; onChange: (v: num
 // ── Main Component ───────────────────────────────────────
 export default function HomePage() {
   const [year, setYear] = useState("2026")
+  useEffect(() => { document.title = "Tacómetro | CLK BI Dashboard" }, [])
   const [month, setMonth] = useState("Febrero")
   const [lineas, setLineas] = useState<DisplayLinea[]>(SEED_LINEAS.map(l => ({ nombre: l.nombre, primaNeta: l.primaNeta, presupuesto: l.presupuesto, anioAnterior: l.anioAnterior })))
   const [fx, setFx] = useState<FxRates>(SEED_FX)
@@ -439,7 +440,7 @@ export default function HomePage() {
 
       {/* Footer pushed to bottom */}
       <div className="mt-auto">
-        <PageFooter />
+        <PageFooter showFootnote />
       </div>
     </div>
   )

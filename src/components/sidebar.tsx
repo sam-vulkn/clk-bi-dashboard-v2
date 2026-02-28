@@ -56,7 +56,7 @@ export function Sidebar() {
                 className={cn(
                   "px-2 py-2 text-[11px] leading-tight transition-colors duration-150 hover:bg-[#1F2937]",
                   item.style,
-                  isActive && "bg-[#1F2937] font-bold"
+                  isActive && "bg-[#1F2937] font-bold border-l-2 border-l-[#C00000]"
                 )}
               >
                 {item.label}

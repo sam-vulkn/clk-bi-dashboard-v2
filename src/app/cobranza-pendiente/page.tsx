@@ -45,6 +45,7 @@ function StatusBadge({ status }: { status: string }) {
 
 export default function CobranzaPendientePage() {
   const [data, setData] = useState<Pendiente[]>(SEED)
+  useEffect(() => { document.title = "Cobranza pendiente | CLK BI Dashboard" }, [])
 
   useEffect(() => {
     ;(async () => {

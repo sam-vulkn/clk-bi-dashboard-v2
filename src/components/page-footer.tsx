@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react"
 
-export function PageFooter() {
+export function PageFooter({ showFootnote = false }: { showFootnote?: boolean }) {
   const [now, setNow] = useState("")
   useEffect(() => {
     const d = new Date()
@@ -24,7 +24,7 @@ export function PageFooter() {
         </div>
       </div>
       <div className="text-[#111] text-center max-w-lg italic text-[9px]">
-        * El total de la prima neta del año anterior está al corte del día: 26/febrero/2025
+        {showFootnote ? "* El total de la prima neta del año anterior está al corte del día: 26/febrero/2025" : "\u00A0"}
       </div>
       <div className="text-gray-500 text-right leading-tight">
         <div>Fecha de actualización.</div>

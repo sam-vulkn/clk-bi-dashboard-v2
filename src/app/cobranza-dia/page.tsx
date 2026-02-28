@@ -31,6 +31,7 @@ const SEED: CobranzaDia[] = [
 
 export default function CobranzaDiaPage() {
   const [data, setData] = useState<CobranzaDia[]>(SEED)
+  useEffect(() => { document.title = "Cobranza por día | CLK BI Dashboard" }, [])
 
   useEffect(() => {
     ;(async () => {

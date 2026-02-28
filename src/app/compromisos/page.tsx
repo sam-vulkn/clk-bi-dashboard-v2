@@ -40,6 +40,7 @@ const MESES: Record<string, number> = {
 
 export default function CompromisosPage() {
   const [data, setData] = useState<CompRow[]>(SEED)
+  useEffect(() => { document.title = "Compromisos 2024 | CLK BI Dashboard" }, [])
   const [isReal, setIsReal] = useState(false)
   const [year] = useState("2026")
   const [month] = useState("Febrero")

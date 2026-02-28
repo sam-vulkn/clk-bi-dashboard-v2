@@ -1,10 +1,12 @@
 "use client"
 
+import { useEffect } from "react"
 import { PageTabs } from "@/components/page-tabs"
 import { PageFooter } from "@/components/page-footer"
 import { Construction } from "lucide-react"
 
 export default function CorporatePage() {
+  useEffect(() => { document.title = "Corporate | CLK BI Dashboard" }, [])
   return (
     <div>
       <PageTabs />
