@@ -44,8 +44,23 @@ export default function HomePage() {
   const fetchData = useCallback(async () => {
     setLoading(true)
     const r = await getLineasNegocio(periodo, year)
-    if (r && r.length > 0) setLineas(r.map(x => ({ nombre: x.linea, primaNeta: x.primaNeta, presupuesto: 0, anioAnterior: 0 })))
-    else setLineas(SEED_LINEAS.map(l => ({ nombre: l.nombre, primaNeta: l.primaNeta, presupuesto: l.presupuesto, anioAnterior: l.anioAnterior })))
+    if (r && r.length > 0) {
+      // Merge real primaNeta from Supabase with SEED presupuesto/anioAnterior
+      const seedMap = Object.fromEntries(SEED_LINEAS.map(s => [s.nombre, s]))
+      const merged = r.map(x => {
+        const seed = seedMap[x.linea]
+        return { nombre: x.linea, primaNeta: x.primaNeta, presupuesto: seed?.presupuesto ?? 0, anioAnterior: seed?.anioAnterior ?? 0 }
+      })
+      // Add SEED-only líneas that don't exist in real data
+      for (const s of SEED_LINEAS) {
+        if (!merged.find(m => m.nombre === s.nombre)) {
+          merged.push({ nombre: s.nombre, primaNeta: s.primaNeta, presupuesto: s.presupuesto, anioAnterior: s.anioAnterior })
+        }
+      }
+      setLineas(merged)
+    } else {
+      setLineas(SEED_LINEAS.map(l => ({ nombre: l.nombre, primaNeta: l.primaNeta, presupuesto: l.presupuesto, anioAnterior: l.anioAnterior })))
+    }
     setLoading(false)
     setExpanded({}); setGerData({}); setExpGer({}); setVendData({}); setSelected(null)
   }, [periodo, year])
