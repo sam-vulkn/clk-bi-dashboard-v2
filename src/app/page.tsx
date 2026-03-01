@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useState, useEffect, useCallback } from "react"
+import React, { useState, useEffect, useRef } from "react"
 import Link from "next/link"
 import { Gauge } from "@/components/gauge"
 import { PageTabs } from "@/components/page-tabs"
@@ -32,8 +32,21 @@ export default function HomePage() {
   const [staleHours, setStaleHours] = useState<number | null>(null)
   const [lastDataDate, setLastDataDate] = useState<string | null>(null)
   const [mounted, setMounted] = useState(false)
+  const [chartReady, setChartReady] = useState(false)
+  const chartRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => { setMounted(true); document.title = "Tacómetro | CLK BI Dashboard" }, [])
+  
+  // Wait for chart container to have dimensions before rendering
+  useEffect(() => {
+    if (!mounted) return
+    const timer = setTimeout(() => {
+      if (chartRef.current && chartRef.current.offsetHeight > 0) {
+        setChartReady(true)
+      }
+    }, 100)
+    return () => clearTimeout(timer)
+  }, [mounted])
   useEffect(() => { getTipoCambio().then(r => { if (r) setFx(r); setFxLoading(false) }).catch(() => setFxLoading(false)) }, [])
   useEffect(() => { getDataFreshness().then(h => setStaleHours(h)) }, [])
   useEffect(() => { getLastDataDate().then(d => setLastDataDate(d)) }, [])
@@ -213,9 +226,9 @@ export default function HomePage() {
             )}
           </div>
         </div>
-        <div className="flex-1" style={{ minHeight: 220 }}>
-          {mounted && chartData.length > 0 && (
-            <ResponsiveContainer width="100%" height="100%" debounce={50}>
+        <div ref={chartRef} className="flex-1" style={{ minHeight: 220, height: 220 }}>
+          {chartReady && chartData.length > 0 && (
+            <ResponsiveContainer width="100%" height={220}>
               <BarChart layout="vertical" data={chartData} margin={{ top: 10, right: 100, left: 20, bottom: 10 }} barGap={8} barSize={32}>
                 <CartesianGrid horizontal vertical={false} stroke="#F0F0F0" />
                 <XAxis type="number" domain={[0, "auto"]} tickFormatter={(v: unknown) => `$${v}M`} fontSize={12} tick={{ fill: "#888" }} axisLine={false} tickLine={false} />
