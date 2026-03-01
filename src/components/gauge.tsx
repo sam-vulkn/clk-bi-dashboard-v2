@@ -23,7 +23,7 @@ export function Gauge({ value, prevYear = 88.9, budget = 129.5, clickable = true
   const budPct = Math.max(0, Math.min(1, (budget - min) / (max - min)))
 
   useEffect(() => {
-    const dur = 1200, t0 = performance.now()
+    const dur = 1400, t0 = performance.now()
     const tick = (now: number) => {
       const p = Math.min((now - t0) / dur, 1)
       setAnim(pct * (1 - Math.pow(1 - p, 3)))
@@ -33,8 +33,9 @@ export function Gauge({ value, prevYear = 88.9, budget = 129.5, clickable = true
     return () => cancelAnimationFrame(raf.current)
   }, [pct])
 
-  const cx = 200, cy = 170
-  const ro = 140, ri = 95
+  // LARGER gauge dimensions
+  const cx = 200, cy = 180
+  const ro = 160, ri = 110 // Bigger arc (was 140/95)
   const startA = 150, sweepA = 240
 
   const toXY = (deg: number, r: number) => {
@@ -54,65 +55,74 @@ export function Gauge({ value, prevYear = 88.9, budget = 129.5, clickable = true
   // Needle
   const na = p2a(anim)
   const nRad = (na * Math.PI) / 180
-  const nLen = ro + 10
+  const nLen = ro + 12
   const tip = { x: cx + nLen * Math.cos(nRad), y: cy + nLen * Math.sin(nRad) }
-  const bw = 5
+  const bw = 6
   const b1 = { x: cx + bw * Math.cos(nRad + Math.PI / 2), y: cy + bw * Math.sin(nRad + Math.PI / 2) }
   const b2 = { x: cx - bw * Math.cos(nRad + Math.PI / 2), y: cy - bw * Math.sin(nRad + Math.PI / 2) }
 
   const GaugeContent = (
-    <div className={`w-full h-full flex flex-col items-center justify-center ${clickable ? 'cursor-pointer hover:opacity-90 transition-opacity' : ''}`}>
-      <svg viewBox="0 0 400 260" className="w-full max-w-[400px]" preserveAspectRatio="xMidYMid meet">
+    <div className={`w-full h-full flex flex-col items-center justify-center ${clickable ? 'cursor-pointer hover:scale-[1.02] transition-transform' : ''}`}>
+      <svg viewBox="0 0 400 280" className="w-full" preserveAspectRatio="xMidYMid meet">
         <defs>
-          <linearGradient id="redZone" x1="0%" y1="0%" x2="100%" y2="0%">
+          {/* Gradients with better textures */}
+          <linearGradient id="redZone" x1="0%" y1="0%" x2="100%" y2="100%">
             <stop offset="0%" stopColor="#DC2626" />
-            <stop offset="100%" stopColor="#EF4444" />
+            <stop offset="50%" stopColor="#EF4444" />
+            <stop offset="100%" stopColor="#F87171" />
           </linearGradient>
-          <linearGradient id="yellowZone" x1="0%" y1="0%" x2="100%" y2="0%">
-            <stop offset="0%" stopColor="#F59E0B" />
+          <linearGradient id="yellowZone" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stopColor="#D97706" />
+            <stop offset="50%" stopColor="#F59E0B" />
             <stop offset="100%" stopColor="#FBBF24" />
           </linearGradient>
-          <linearGradient id="greenZone" x1="0%" y1="0%" x2="100%" y2="0%">
-            <stop offset="0%" stopColor="#10B981" />
+          <linearGradient id="greenZone" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stopColor="#059669" />
+            <stop offset="50%" stopColor="#10B981" />
             <stop offset="100%" stopColor="#34D399" />
           </linearGradient>
-          <filter id="needleShadow"><feDropShadow dx="1" dy="2" stdDeviation="2" floodOpacity="0.3" /></filter>
-          <filter id="textGlow"><feDropShadow dx="0" dy="1" stdDeviation="1" floodOpacity="0.1" /></filter>
+          <filter id="arcShadow">
+            <feDropShadow dx="0" dy="3" stdDeviation="4" floodOpacity="0.2" />
+          </filter>
+          <filter id="needleShadow">
+            <feDropShadow dx="1" dy="3" stdDeviation="3" floodOpacity="0.35" />
+          </filter>
         </defs>
 
-        {/* Background track */}
-        <path d={descArc(startA, startA + sweepA, ro + 3, ri - 3)} fill="#E5E7EB" />
+        {/* Background track with shadow */}
+        <path d={descArc(startA, startA + sweepA, ro + 4, ri - 4)} fill="#E0E0E0" filter="url(#arcShadow)" />
 
-        {/* Colored zones */}
+        {/* Colored zones - PROMINENT */}
         <path d={descArc(startA, z1e, ro, ri)} fill="url(#redZone)" />
         <path d={descArc(z1e, z2e, ro, ri)} fill="url(#yellowZone)" />
         <path d={descArc(z2e, startA + sweepA, ro, ri)} fill="url(#greenZone)" />
 
-        {/* Zone labels with values */}
-        {/* Año Anterior marker */}
+        {/* Inner highlight for depth */}
+        <path d={descArc(startA, startA + sweepA, ri + 8, ri)} fill="rgba(255,255,255,0.15)" />
+
+        {/* Zone markers with labels */}
         {(() => {
           const angle = p2a(pyPct)
-          const o = toXY(angle, ro + 4), inner = toXY(angle, ri - 4)
-          const labelPos = toXY(angle, ro + 22)
+          const o = toXY(angle, ro + 5), inner = toXY(angle, ri - 5)
+          const labelPos = toXY(angle, ro + 25)
           return (
             <g>
-              <line x1={o.x} y1={o.y} x2={inner.x} y2={inner.y} stroke="white" strokeWidth="3" />
-              <text x={labelPos.x} y={labelPos.y} fontSize="11" fill="#991B1B" textAnchor="middle" fontWeight="700">
+              <line x1={o.x} y1={o.y} x2={inner.x} y2={inner.y} stroke="white" strokeWidth="4" />
+              <text x={labelPos.x} y={labelPos.y} fontSize="12" fill="#B91C1C" textAnchor="middle" fontWeight="800">
                 ${prevYear}M
               </text>
             </g>
           )
         })()}
         
-        {/* Presupuesto marker */}
         {(() => {
           const angle = p2a(budPct)
-          const o = toXY(angle, ro + 4), inner = toXY(angle, ri - 4)
-          const labelPos = toXY(angle, ro + 22)
+          const o = toXY(angle, ro + 5), inner = toXY(angle, ri - 5)
+          const labelPos = toXY(angle, ro + 25)
           return (
             <g>
-              <line x1={o.x} y1={o.y} x2={inner.x} y2={inner.y} stroke="white" strokeWidth="3" />
-              <text x={labelPos.x} y={labelPos.y} fontSize="11" fill="#166534" textAnchor="middle" fontWeight="700">
+              <line x1={o.x} y1={o.y} x2={inner.x} y2={inner.y} stroke="white" strokeWidth="4" />
+              <text x={labelPos.x} y={labelPos.y} fontSize="12" fill="#166534" textAnchor="middle" fontWeight="800">
                 ${budget}M
               </text>
             </g>
@@ -120,37 +130,28 @@ export function Gauge({ value, prevYear = 88.9, budget = 129.5, clickable = true
         })()}
 
         {/* Scale markers */}
-        <text x={toXY(startA, ro + 18).x} y={toXY(startA, ro + 18).y} fontSize="10" fill="#9CA3AF" textAnchor="middle">$0M</text>
-        <text x={toXY(startA + sweepA, ro + 18).x} y={toXY(startA + sweepA, ro + 18).y} fontSize="10" fill="#9CA3AF" textAnchor="middle">${max}M</text>
+        <text x={toXY(startA, ro + 20).x} y={toXY(startA, ro + 20).y} fontSize="11" fill="#9CA3AF" textAnchor="middle" fontWeight="600">$0M</text>
+        <text x={toXY(startA + sweepA, ro + 20).x} y={toXY(startA + sweepA, ro + 20).y} fontSize="11" fill="#9CA3AF" textAnchor="middle" fontWeight="600">${max}M</text>
 
-        {/* Needle */}
+        {/* Needle - prominent */}
         <polygon points={`${tip.x},${tip.y} ${b1.x},${b1.y} ${b2.x},${b2.y}`} fill="#1F2937" filter="url(#needleShadow)" />
-        <circle cx={cx} cy={cy} r={12} fill="#374151" />
-        <circle cx={cx} cy={cy} r={6} fill="#6B7280" />
+        <circle cx={cx} cy={cy} r={14} fill="#374151" />
+        <circle cx={cx} cy={cy} r={7} fill="#6B7280" />
+        <circle cx={cx} cy={cy} r={3} fill="#9CA3AF" />
 
-        {/* ═══ CENTER VALUE - LARGE & PROMINENT ═══ */}
-        <text x={cx} y={cy - 25} fontSize="56" fill="#111827" textAnchor="middle" fontWeight="900" fontFamily="system-ui" filter="url(#textGlow)">
+        {/* ═══ CENTER VALUE - LARGE, BOLD, WELL SPACED ═══ */}
+        <text x={cx} y={cy - 35} fontSize="64" fill="#111827" textAnchor="middle" fontWeight="900" fontFamily="system-ui">
           ${value.toFixed(1)}M
         </text>
 
-        {/* Budget info - elegant layout */}
-        <text x={cx} y={cy + 12} fontSize="15" fill="#6B7280" textAnchor="middle" fontFamily="system-ui">
-          de <tspan fill="#111827" fontWeight="800" fontSize="17">${budget}M</tspan> presupuesto
+        {/* Budget text - SEPARATE LINE, NOT OVERLAPPING */}
+        <text x={cx} y={cy + 5} fontSize="16" fill="#6B7280" textAnchor="middle" fontFamily="system-ui">
+          de <tspan fill="#111827" fontWeight="800" fontSize="18">${budget}M</tspan> presupuesto
         </text>
-        
-        {/* Zone legend at bottom */}
-        <g transform="translate(200, 245)">
-          <rect x="-120" y="-8" width="16" height="10" rx="2" fill="#EF4444" />
-          <text x="-100" y="0" fontSize="9" fill="#666" dominantBaseline="middle">Año Ant.</text>
-          <rect x="-40" y="-8" width="16" height="10" rx="2" fill="#FBBF24" />
-          <text x="-20" y="0" fontSize="9" fill="#666" dominantBaseline="middle">En Meta</text>
-          <rect x="40" y="-8" width="16" height="10" rx="2" fill="#34D399" />
-          <text x="60" y="0" fontSize="9" fill="#666" dominantBaseline="middle">Arriba</text>
-        </g>
       </svg>
       
       {clickable && (
-        <div className="text-[10px] text-gray-400 mt-1 text-center">
+        <div className="text-xs text-gray-500 mt-0 text-center font-medium">
           Click para ver detalle →
         </div>
       )}
