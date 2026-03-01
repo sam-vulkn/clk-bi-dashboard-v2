@@ -12,11 +12,15 @@ export function Gauge({ value, prevYear = 88.9, budget = 129.5 }: GaugeProps) {
   const [anim, setAnim] = useState(0)
   const raf = useRef(0)
 
+  // Smart range: adapt to actual values — never let needle be invisible
   const min = 0
-  const max = Math.ceil(Math.max(budget * 1.08, value * 1.15) / 5) * 5
-  const pct = Math.max(0, Math.min(1, (value - min) / (max - min)))
-  const pyPct = (prevYear - min) / (max - min)
-  const budPct = (budget - min) / (max - min)
+  // Max = whichever is biggest × 1.15, rounded up
+  const rawMax = Math.max(budget, prevYear, value) * 1.15
+  const max = Math.ceil(rawMax / 10) * 10 // round to nearest 10
+
+  const pct = Math.max(0.02, Math.min(0.98, (value - min) / (max - min))) // clamp 2-98%
+  const pyPct = Math.max(0, Math.min(1, (prevYear - min) / (max - min)))
+  const budPct = Math.max(0, Math.min(1, (budget - min) / (max - min)))
 
   useEffect(() => {
     const dur = 1400, t0 = performance.now()
@@ -29,126 +33,121 @@ export function Gauge({ value, prevYear = 88.9, budget = 129.5 }: GaugeProps) {
     return () => cancelAnimationFrame(raf.current)
   }, [pct])
 
-  // Arc geometry — 240° sweep (from 150° to 390°)
-  const cx = 200, cy = 185, r = 150, sw = 28
-  const startAngle = 150, endAngle = 390, sweep = 240
+  const cx = 200, cy = 175
+  const ro = 145, ri = 105
+  const startA = 150, sweepA = 240 // 240° arc
 
-  const toXY = (angleDeg: number, radius: number) => {
-    const rad = (angleDeg * Math.PI) / 180
-    return { x: cx + radius * Math.cos(rad), y: cy + radius * Math.sin(rad) }
+  const toXY = (deg: number, r: number) => {
+    const rad = (deg * Math.PI) / 180
+    return { x: cx + r * Math.cos(rad), y: cy + r * Math.sin(rad) }
   }
 
-  const describeArc = (start: number, end: number, ro: number, ri: number) => {
-    const s1 = toXY(start, ro), e1 = toXY(end, ro)
-    const s2 = toXY(end, ri), e2 = toXY(start, ri)
-    const large = (end - start) > 180 ? 1 : 0
-    return `M${s1.x},${s1.y} A${ro},${ro} 0 ${large} 1 ${e1.x},${e1.y} L${s2.x},${s2.y} A${ri},${ri} 0 ${large} 0 ${e2.x},${e2.y} Z`
+  const descArc = (s: number, e: number, rOut: number, rIn: number) => {
+    const p1 = toXY(s, rOut), p2 = toXY(e, rOut), p3 = toXY(e, rIn), p4 = toXY(s, rIn)
+    const lg = (e - s) > 180 ? 1 : 0
+    return `M${p1.x},${p1.y} A${rOut},${rOut} 0 ${lg} 1 ${p2.x},${p2.y} L${p3.x},${p3.y} A${rIn},${rIn} 0 ${lg} 0 ${p4.x},${p4.y} Z`
   }
 
-  const pctToAngle = (p: number) => startAngle + p * sweep
-  const ro = r, ri = r - sw
+  const p2a = (p: number) => startA + p * sweepA
 
-  // Zone arcs
-  const z1End = pctToAngle(pyPct)
-  const z2End = pctToAngle(budPct)
+  // Zone angles
+  const z1e = p2a(pyPct), z2e = p2a(budPct)
 
   // Needle
-  const needleAngle = pctToAngle(anim)
-  const nRad = (needleAngle * Math.PI) / 180
-  const nLen = r + 8
-  const tipX = cx + nLen * Math.cos(nRad), tipY = cy + nLen * Math.sin(nRad)
-  const bw = 4
+  const na = p2a(anim)
+  const nRad = (na * Math.PI) / 180
+  const nLen = ro + 6
+  const tip = { x: cx + nLen * Math.cos(nRad), y: cy + nLen * Math.sin(nRad) }
   const pRad = nRad + Math.PI / 2
+  const bw = 3.5
   const b1 = { x: cx + bw * Math.cos(pRad), y: cy + bw * Math.sin(pRad) }
   const b2 = { x: cx - bw * Math.cos(pRad), y: cy - bw * Math.sin(pRad) }
-  // Tail
-  const tailLen = 20
-  const tx = cx - tailLen * Math.cos(nRad), ty = cy - tailLen * Math.sin(nRad)
+  const tail = { x: cx - 15 * Math.cos(nRad), y: cy - 15 * Math.sin(nRad) }
 
-  // Zone boundary markers
-  const marker = (p: number, label: string, color: string) => {
-    const angle = pctToAngle(p)
-    const outer = toXY(angle, ro + 2), inner = toXY(angle, ri - 2)
-    const lbl = toXY(angle, ro + 18)
+  // Tick marks with values
+  const renderTick = (pctVal: number, label: string, color: string, showLine: boolean) => {
+    const angle = p2a(pctVal)
+    const outer = toXY(angle, ro + 2)
+    const inner = toXY(angle, ri - 2)
+    const lblPos = toXY(angle, ro + 16)
     return (
       <g key={label}>
-        <line x1={outer.x} y1={outer.y} x2={inner.x} y2={inner.y} stroke="white" strokeWidth="3" />
-        <text x={lbl.x} y={lbl.y} fontSize="9" fill={color} textAnchor="middle" dominantBaseline="middle" fontWeight="800" fontFamily="Lato">{label}</text>
+        {showLine && <line x1={outer.x} y1={outer.y} x2={inner.x} y2={inner.y} stroke="white" strokeWidth="2.5" />}
+        <text x={lblPos.x} y={lblPos.y} fontSize="9" fill={color} textAnchor="middle" dominantBaseline="middle" fontWeight="800" fontFamily="Lato">
+          {label}
+        </text>
       </g>
     )
   }
 
+  // Scale ticks — every 25% of range
+  const scaleTicks = [0, 0.25, 0.5, 0.75, 1].map(p => {
+    const val = min + p * (max - min)
+    const angle = p2a(p)
+    const pos = toXY(angle, ro + 10)
+    return (
+      <text key={`sc-${p}`} x={pos.x} y={pos.y} fontSize="7" fill="#BBB" textAnchor="middle" dominantBaseline="middle">
+        ${Math.round(val)}M
+      </text>
+    )
+  })
+
+  // Small tick lines
+  const smallTicks = Array.from({ length: 21 }, (_, i) => i / 20).map(p => {
+    const angle = p2a(p)
+    const isMajor = p % 0.25 === 0
+    const outerR = ro + (isMajor ? 3 : 1)
+    const innerR = ro - (isMajor ? 5 : 2)
+    const o = toXY(angle, outerR), i2 = toXY(angle, innerR)
+    return <line key={`t-${p}`} x1={o.x} y1={o.y} x2={i2.x} y2={i2.y} stroke={isMajor ? "#999" : "#CCC"} strokeWidth={isMajor ? 1.5 : 0.7} />
+  })
+
   return (
     <div className="w-full flex flex-col items-center">
-      <svg viewBox="30 20 340 220" className="w-full" preserveAspectRatio="xMidYMid meet">
+      <svg viewBox="25 10 350 220" className="w-full" preserveAspectRatio="xMidYMid meet">
         <defs>
-          {/* 3D depth shadow under the arc */}
-          <filter id="arcDepth">
-            <feDropShadow dx="0" dy="4" stdDeviation="6" floodColor="#000" floodOpacity="0.12" />
-          </filter>
-          {/* Inner shadow for 3D feel */}
-          <linearGradient id="redGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" stopColor="#EF4444" />
-            <stop offset="100%" stopColor="#B91C1C" />
-          </linearGradient>
-          <linearGradient id="yelGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" stopColor="#FACC15" />
-            <stop offset="100%" stopColor="#CA8A04" />
-          </linearGradient>
-          <linearGradient id="grnGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" stopColor="#22C55E" />
-            <stop offset="100%" stopColor="#15803D" />
-          </linearGradient>
-          <filter id="needleShadow">
-            <feDropShadow dx="2" dy="2" stdDeviation="2" floodOpacity="0.3" />
-          </filter>
-          <radialGradient id="pivotMetal" cx="35%" cy="35%">
-            <stop offset="0%" stopColor="#F0F0F0" />
-            <stop offset="50%" stopColor="#999" />
-            <stop offset="100%" stopColor="#555" />
-          </radialGradient>
+          <filter id="arcShadow"><feDropShadow dx="0" dy="3" stdDeviation="4" floodColor="#000" floodOpacity="0.1" /></filter>
+          <linearGradient id="rg" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stopColor="#EF4444" /><stop offset="100%" stopColor="#B91C1C" /></linearGradient>
+          <linearGradient id="yg" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stopColor="#FCD34D" /><stop offset="100%" stopColor="#D97706" /></linearGradient>
+          <linearGradient id="gg" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stopColor="#34D399" /><stop offset="100%" stopColor="#059669" /></linearGradient>
+          <filter id="nSh"><feDropShadow dx="1" dy="2" stdDeviation="2" floodOpacity="0.25" /></filter>
+          <radialGradient id="pvt" cx="35%" cy="35%"><stop offset="0%" stopColor="#EEE" /><stop offset="60%" stopColor="#999" /><stop offset="100%" stopColor="#555" /></radialGradient>
         </defs>
 
-        {/* Background track */}
-        <path d={describeArc(startAngle, endAngle, ro + 3, ri - 3)} fill="#E8E8E8" filter="url(#arcDepth)" />
+        {/* Track background */}
+        <path d={descArc(startA, startA + sweepA, ro + 2, ri - 2)} fill="#E5E5E5" filter="url(#arcShadow)" />
 
-        {/* 3 Zone arcs with gradients */}
-        <path d={describeArc(startAngle, z1End, ro, ri)} fill="url(#redGrad)" />
-        <path d={describeArc(z1End, z2End, ro, ri)} fill="url(#yelGrad)" />
-        <path d={describeArc(z2End, endAngle, ro, ri)} fill="url(#grnGrad)" />
+        {/* 3 zones */}
+        <path d={descArc(startA, z1e, ro, ri)} fill="url(#rg)" />
+        <path d={descArc(z1e, z2e, ro, ri)} fill="url(#yg)" />
+        <path d={descArc(z2e, startA + sweepA, ro, ri)} fill="url(#gg)" />
 
-        {/* Thin highlight on outer edge for 3D */}
-        <path d={describeArc(startAngle, endAngle, ro, ro - 3)} fill="rgba(255,255,255,0.25)" />
+        {/* Highlight strip */}
+        <path d={descArc(startA, startA + sweepA, ro, ro - 4)} fill="rgba(255,255,255,0.2)" />
 
-        {/* Zone boundaries */}
-        {marker(pyPct, `$${prevYear}M`, "#DC2626")}
-        {marker(budPct, `$${budget}M`, "#16A34A")}
+        {/* Small tick marks */}
+        {smallTicks}
 
-        {/* Scale labels at start/end */}
-        {(() => {
-          const s = toXY(startAngle, ro + 16)
-          const e = toXY(endAngle, ro + 16)
-          return (
-            <>
-              <text x={s.x} y={s.y} fontSize="8" fill="#BBB" textAnchor="middle">$0</text>
-              <text x={e.x} y={e.y} fontSize="8" fill="#BBB" textAnchor="middle">${max}M</text>
-            </>
-          )
-        })()}
+        {/* Scale numbers */}
+        {scaleTicks}
 
-        {/* Needle with tail — metallic feel */}
-        <line x1={tx} y1={ty} x2={tipX} y2={tipY} stroke="#222" strokeWidth="3" strokeLinecap="round" filter="url(#needleShadow)" />
-        <polygon points={`${tipX},${tipY} ${b1.x},${b1.y} ${b2.x},${b2.y}`} fill="#1A1A1A" filter="url(#needleShadow)" />
+        {/* Zone boundary markers with $ values */}
+        {renderTick(pyPct, `$${prevYear}M`, "#B91C1C", true)}
+        {renderTick(budPct, `$${budget}M`, "#059669", true)}
 
-        {/* Metallic pivot */}
-        <circle cx={cx} cy={cy} r={12} fill="url(#pivotMetal)" stroke="#777" strokeWidth="1" />
-        <circle cx={cx} cy={cy} r={4} fill="#555" />
+        {/* Needle */}
+        <line x1={tail.x} y1={tail.y} x2={tip.x} y2={tip.y} stroke="#1A1A1A" strokeWidth="2.5" strokeLinecap="round" filter="url(#nSh)" />
+        <polygon points={`${tip.x},${tip.y} ${b1.x},${b1.y} ${b2.x},${b2.y}`} fill="#111" />
 
-        {/* Value in center */}
-        <text x={cx} y={cy - 32} fontSize="38" fill="#041224" textAnchor="middle" fontWeight="900" fontFamily="Lato, sans-serif">
+        {/* Pivot */}
+        <circle cx={cx} cy={cy} r={10} fill="url(#pvt)" stroke="#888" strokeWidth="0.5" />
+        <circle cx={cx} cy={cy} r={3} fill="#666" />
+
+        {/* Center value */}
+        <text x={cx} y={cy - 25} fontSize="34" fill="#041224" textAnchor="middle" fontWeight="900" fontFamily="Lato">
           ${value < 1000 ? value.toFixed(1) : Math.round(value)}M
         </text>
-        <text x={cx} y={cy - 14} fontSize="10" fill="#AAA" textAnchor="middle" fontFamily="Lato">
+        <text x={cx} y={cy - 8} fontSize="10" fill="#999" textAnchor="middle" fontFamily="Lato">
           de ${budget}M presupuesto
         </text>
       </svg>
