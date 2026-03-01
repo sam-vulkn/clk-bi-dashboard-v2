@@ -256,23 +256,25 @@ export default function HomePage() {
             )}
           </div>
         </div>
-        <div className="flex-1 min-h-[180px]">
-          {mounted && <ResponsiveContainer width="100%" height="100%" minHeight={180}>
-            <BarChart layout="vertical" data={chartData} margin={{ top: 8, right: 80, left: 10, bottom: 8 }} barGap={6} barSize={24}>
-              <CartesianGrid horizontal vertical={false} stroke="#F0F0F0" />
-              <XAxis type="number" domain={[0, "auto"]} tickFormatter={(v: unknown) => `$${v}M`} fontSize={10} tick={{ fill: "#999" }} axisLine={false} tickLine={false} />
-              <YAxis type="category" dataKey="nombre" width={140} fontSize={11} tick={{ fill: "#111", fontWeight: 700 }} axisLine={false} tickLine={false} />
-              <Bar dataKey="pn" radius={[0, 6, 6, 0]}>
-                {chartData.map((e, i) => <Cell key={i} fill="#041224" opacity={!selected || e.nombre === selected ? 1 : 0.15} />)}
-                <LabelList dataKey="pn" position="right" formatter={(v: unknown) => `$${v}M`} fontSize={11} fill="#333" fontWeight={700} offset={8} />
-              </Bar>
-              {chartData.some(d => d.ppto > 0) && (
-                <Bar dataKey="ppto" fill="#CCD1D3" radius={[0, 6, 6, 0]}>
-                  <LabelList dataKey="ppto" position="right" formatter={(v: unknown) => Number(v) > 0 ? `$${v}M` : ""} fontSize={9} fill="#888" offset={8} />
+        <div className="flex-1" style={{ minHeight: 200, height: "100%" }}>
+          {mounted && chartData.length > 0 && (
+            <ResponsiveContainer width="100%" height="100%" debounce={50}>
+              <BarChart layout="vertical" data={chartData} margin={{ top: 8, right: 80, left: 10, bottom: 8 }} barGap={6} barSize={24}>
+                <CartesianGrid horizontal vertical={false} stroke="#F0F0F0" />
+                <XAxis type="number" domain={[0, "auto"]} tickFormatter={(v: unknown) => `$${v}M`} fontSize={10} tick={{ fill: "#999" }} axisLine={false} tickLine={false} />
+                <YAxis type="category" dataKey="nombre" width={140} fontSize={11} tick={{ fill: "#111", fontWeight: 700 }} axisLine={false} tickLine={false} />
+                <Bar dataKey="pn" radius={[0, 6, 6, 0]}>
+                  {chartData.map((e, i) => <Cell key={i} fill="#041224" opacity={!selected || e.nombre === selected ? 1 : 0.15} />)}
+                  <LabelList dataKey="pn" position="right" formatter={(v: unknown) => `$${v}M`} fontSize={11} fill="#333" fontWeight={700} offset={8} />
                 </Bar>
-              )}
-            </BarChart>
-          </ResponsiveContainer>}
+                {chartData.some(d => d.ppto > 0) && (
+                  <Bar dataKey="ppto" fill="#CCD1D3" radius={[0, 6, 6, 0]}>
+                    <LabelList dataKey="ppto" position="right" formatter={(v: unknown) => Number(v) > 0 ? `$${v}M` : ""} fontSize={9} fill="#888" offset={8} />
+                  </Bar>
+                )}
+              </BarChart>
+            </ResponsiveContainer>
+          )}
         </div>
       </div>
 
