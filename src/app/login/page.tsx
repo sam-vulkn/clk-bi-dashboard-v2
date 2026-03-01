@@ -48,10 +48,13 @@ export default function LoginPage() {
           <div className="mb-4">
             <label className="block text-sm font-medium text-clk-dark mb-1.5">Correo electrónico</label>
             <input
+              id="login-email"
+              name="email"
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
+              autoComplete="email"
               className="w-full px-3 py-2 border border-clk-gray-light rounded-md text-sm focus:outline-none focus:border-clk-red"
               placeholder="usuario@clkseguros.com"
             />
@@ -60,10 +63,13 @@ export default function LoginPage() {
           <div className="mb-6">
             <label className="block text-sm font-medium text-clk-dark mb-1.5">Contraseña</label>
             <input
+              id="login-password"
+              name="password"
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required
+              autoComplete="current-password"
               className="w-full px-3 py-2 border border-clk-gray-light rounded-md text-sm focus:outline-none focus:border-clk-red"
               placeholder="••••••••"
             />

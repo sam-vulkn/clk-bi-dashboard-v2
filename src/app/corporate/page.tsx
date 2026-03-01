@@ -132,15 +132,15 @@ export default function CorporatePage() {
 
       {/* Filters */}
       <div className="flex items-center gap-2 mb-3 flex-wrap">
-        <select id="filter-select" name="filter" value={year} onChange={e => setYear(e.target.value)} className="border border-[#E5E7EB] rounded px-2 py-1 text-xs bg-white">
+        <select id="corp-year" name="corp-year" value={year} onChange={e => setYear(e.target.value)} className="border border-[#E5E7EB] rounded px-2 py-1 text-xs bg-white">
           <option>2026</option><option>2025</option><option>2024</option>
         </select>
-        <select id="filter-select" name="filter" value={month} onChange={e => setMonth(e.target.value)} className="border border-[#E5E7EB] rounded px-2 py-1 text-xs bg-white">
+        <select id="corp-month" name="corp-month" value={month} onChange={e => setMonth(e.target.value)} className="border border-[#E5E7EB] rounded px-2 py-1 text-xs bg-white">
           {Object.keys(MESES).map(m => <option key={m}>{m}</option>)}
         </select>
         <div className="relative ml-auto">
           <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" />
-          <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Buscar..." className="pl-7 pr-3 py-1 border border-[#E5E7EB] rounded text-xs w-44 bg-white" />
+          <input id="corp-search" name="corp-search" value={search} onChange={e => setSearch(e.target.value)} placeholder="Buscar..." className="pl-7 pr-3 py-1 border border-[#E5E7EB] rounded text-xs w-44 bg-white" />
         </div>
       </div>
 

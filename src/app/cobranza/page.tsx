@@ -95,14 +95,14 @@ export default function CobranzaPage() {
       <div className="flex items-center justify-between mb-4">
         <h1 className="text-lg font-bold text-[#041224]">Aseguradoras</h1>
         <div className="flex items-center gap-2 text-xs">
-          <select className="border border-[#E5E7E9] rounded px-2.5 py-1.5 bg-white text-[#041224]"><option>2026</option><option>2025</option></select>
-          <select className="border border-[#E5E7E9] rounded px-2.5 py-1.5 bg-white text-[#041224]">
+          <select id="cob-year" name="cob-year" className="border border-[#E5E7E9] rounded px-2.5 py-1.5 bg-white text-[#041224]"><option>2026</option><option>2025</option></select>
+          <select id="cob-month" name="cob-month" className="border border-[#E5E7E9] rounded px-2.5 py-1.5 bg-white text-[#041224]">
             <option>Enero</option><option>Febrero</option><option>Marzo</option><option>Abril</option>
             <option>Mayo</option><option>Junio</option><option>Julio</option><option>Agosto</option>
             <option>Septiembre</option><option>Octubre</option><option>Noviembre</option><option>Diciembre</option>
           </select>
-          <select className="border border-[#E5E7E9] rounded px-2.5 py-1.5 bg-white text-[#041224]"><option>Línea de negocio</option></select>
-          <select className="border border-[#E5E7E9] rounded px-2.5 py-1.5 bg-white text-[#041224]"><option>Ramo</option></select>
+          <select id="cob-linea" name="cob-linea" className="border border-[#E5E7E9] rounded px-2.5 py-1.5 bg-white text-[#041224]"><option>Línea de negocio</option></select>
+          <select id="cob-ramo" name="cob-ramo" className="border border-[#E5E7E9] rounded px-2.5 py-1.5 bg-white text-[#041224]"><option>Ramo</option></select>
           <span className="text-xs text-[#CCD1D3] ml-2">Actualizado: 27/02/2026</span>
         </div>
       </div>

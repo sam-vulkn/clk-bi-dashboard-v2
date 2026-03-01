@@ -69,6 +69,8 @@ export function NLQuery({ periodo, year }: NLQueryProps) {
       <p className="text-[10px] text-[#CCD1D3] uppercase font-bold mb-2">🧪 Beta — Pregunta sobre tus datos</p>
       <div className="flex items-center gap-2">
         <input
+          id="nl-query-input"
+          name="nl-query"
           value={query}
           onChange={e => setQuery(e.target.value)}
           onKeyDown={e => e.key === "Enter" && handleSubmit()}
