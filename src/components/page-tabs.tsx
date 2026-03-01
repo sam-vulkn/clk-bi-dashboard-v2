@@ -7,7 +7,7 @@ import { cn } from "@/lib/utils"
 const TABS = [
   { href: "/", label: "Tacómetro" },
   { href: "/tabla-detalle", label: "Tabla detalle" },
-  { href: "/compromisos", label: "Compromisos 2024" },
+  { href: "/compromisos", label: "Compromisos 2025" },
   { href: "/internacional", label: "Internacional" },
   { href: "/corporate", label: "Corporate" },
   { href: "/cobranza", label: "Convenios" },

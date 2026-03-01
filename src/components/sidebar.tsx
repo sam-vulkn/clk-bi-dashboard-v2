@@ -47,30 +47,35 @@ export function Sidebar() {
           Grupo Click
         </Link>
 
-        {/* Cobranza buttons — coral style */}
-        <div className="flex flex-col gap-2 mx-3 mt-3">
-          <Link
-            href="/cobranza-dia"
-            onClick={() => setOpen(false)}
-            className={`rounded-lg text-center py-3 px-3 text-xs font-semibold no-underline transition-all duration-200 ${
-              isActive("/cobranza-dia")
-                ? "bg-[#FEE2E2] text-[#E62800] shadow-sm border border-[#E62800]/20"
-                : "bg-[#FEE2E2]/60 text-[#041224] hover:bg-[#FEE2E2] hover:text-[#E62800]"
-            }`}
-          >
-            Cobranza por día
-          </Link>
-          <Link
-            href="/cobranza-pendiente"
-            onClick={() => setOpen(false)}
-            className={`rounded-lg text-center py-3 px-3 text-xs font-semibold no-underline transition-all duration-200 ${
-              isActive("/cobranza-pendiente")
-                ? "bg-[#FEE2E2] text-[#E62800] shadow-sm border border-[#E62800]/20"
-                : "bg-[#FEE2E2]/60 text-[#041224] hover:bg-[#FEE2E2] hover:text-[#E62800]"
-            }`}
-          >
-            Cobranza pendiente
-          </Link>
+        {/* Cobranza box — styled like Power BI reference */}
+        <div className="mx-3 mt-4 bg-white rounded-lg border border-[#E5E7E9] shadow-sm overflow-hidden">
+          <div className="bg-[#FEE2E2] px-3 py-1.5 border-b border-[#E62800]/10">
+            <span className="text-[10px] font-bold text-[#E62800] uppercase tracking-wider">Cobranza</span>
+          </div>
+          <div className="flex flex-col">
+            <Link
+              href="/cobranza-dia"
+              onClick={() => setOpen(false)}
+              className={`text-center py-2.5 px-3 text-[11px] font-semibold no-underline transition-all duration-200 border-b border-[#F0F0F0] ${
+                isActive("/cobranza-dia")
+                  ? "bg-[#FEE2E2] text-[#E62800]"
+                  : "text-[#041224] hover:bg-[#FEE2E2]/40 hover:text-[#E62800]"
+              }`}
+            >
+              Cobranza por día
+            </Link>
+            <Link
+              href="/cobranza-pendiente"
+              onClick={() => setOpen(false)}
+              className={`text-center py-2.5 px-3 text-[11px] font-semibold no-underline transition-all duration-200 ${
+                isActive("/cobranza-pendiente")
+                  ? "bg-[#FEE2E2] text-[#E62800]"
+                  : "text-[#041224] hover:bg-[#FEE2E2]/40 hover:text-[#E62800]"
+              }`}
+            >
+              Cobranza pendiente
+            </Link>
+          </div>
         </div>
 
         {/* Spacer */}

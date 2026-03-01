@@ -143,12 +143,14 @@ export function Gauge({ value, prevYear = 88.9, budget = 129.5 }: GaugeProps) {
         <circle cx={cx} cy={cy} r={10} fill="url(#pvt)" stroke="#888" strokeWidth="0.5" />
         <circle cx={cx} cy={cy} r={3} fill="#666" />
 
-        {/* Center value */}
-        <text x={cx} y={cy - 25} fontSize="34" fill="#041224" textAnchor="middle" fontWeight="900" fontFamily="Lato">
+        {/* Center value — BOLD like Power BI */}
+        <text x={cx} y={cy - 25} fontSize="52" fill="#041224" textAnchor="middle" fontWeight="900" fontFamily="Lato" letterSpacing="-2">
           ${value < 1000 ? value.toFixed(1) : Math.round(value)}M
         </text>
-        <text x={cx} y={cy - 8} fontSize="10" fill="#999" textAnchor="middle" fontFamily="Lato">
-          de ${budget}M presupuesto
+        <text x={cx} y={cy + 5} fontSize="13" fill="#666" textAnchor="middle" fontFamily="Lato">
+          <tspan fill="#999">de </tspan>
+          <tspan fill="#041224" fontWeight="800" fontSize="15">${budget}M</tspan>
+          <tspan fill="#999"> presupuesto</tspan>
         </text>
       </svg>
     </div>

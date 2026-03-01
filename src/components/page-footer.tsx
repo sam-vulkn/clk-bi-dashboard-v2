@@ -19,7 +19,7 @@ export function PageFooter({ showFootnote = false }: { showFootnote?: boolean })
         </div>
         {showFootnote && (
           <span className="text-[9px] text-[#CCD1D3] italic">
-            * El total de la prima neta del año anterior está al corte del día: 26/febrero/2025
+            * El total de la prima neta del año anterior está al corte del mismo periodo del año anterior
           </span>
         )}
       </div>

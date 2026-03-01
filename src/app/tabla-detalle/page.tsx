@@ -45,6 +45,8 @@ export default function TablaDetallePage() {
   const [month, setMonth] = useState("Febrero")
   const [search, setSearch] = useState("")
   const [loading, setLoading] = useState(true)
+  const [mounted, setMounted] = useState(false)
+  useEffect(() => { setMounted(true) }, [])
   const [compareMode, setCompareMode] = useState<"yoy" | "mom" | "qoq" | "ytd">("yoy")
 
   // Drill state
@@ -434,7 +436,7 @@ export default function TablaDetallePage() {
             </div>
           )}
         </div>
-        <span className="text-xs text-[#CCD1D3]">Datos al: {lastDataDate ?? new Date().toLocaleDateString("es-MX", { day: "2-digit", month: "2-digit", year: "numeric" })}</span>
+        <span className="text-xs text-[#CCD1D3]">Datos al: {lastDataDate ?? (mounted ? new Date().toLocaleDateString("es-MX", { day: "2-digit", month: "2-digit", year: "numeric" }) : "—")}</span>
         {(() => {
           if (!lastDataDate) return null
           const parts = lastDataDate.split("/")
