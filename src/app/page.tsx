@@ -10,13 +10,11 @@ import {
   getTipoCambio, getLastDataDate,
 } from "@/lib/queries"
 import type { FxRates } from "@/lib/queries"
-import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, LabelList, Tooltip } from "recharts"
+import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, LabelList, Legend } from "recharts"
 
 function fmt(v: number) {
   return new Intl.NumberFormat("es-MX", { style: "currency", currency: "MXN", minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(v)
 }
-
-const MESES = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"]
 
 export default function HomePage() {
   const [year, setYear] = useState("2026")
@@ -49,42 +47,48 @@ export default function HomePage() {
   const gB = totalPpto / 1e6
   const gP = totalAA / 1e6
 
+  // Chart data - order like Power BI (smallest to largest)
   const chartData = [...lineas].sort((a, b) => a.primaNeta - b.primaNeta).map(l => ({
     nombre: l.nombre,
-    value: +(l.primaNeta / 1e6).toFixed(1),
+    pn: +(l.primaNeta / 1e6).toFixed(1),
     ppto: +(l.presupuesto / 1e6).toFixed(1),
   }))
 
   return (
-    <div className="min-h-screen">
-      {/* Compact header with tabs - NO WHITE BAR */}
+    <div className="min-h-screen bg-[#F5F5F5]">
       <PageTabs />
 
-      {/* Title Row - Elegant like Power BI */}
-      <div className="flex items-center justify-between mb-3">
-        <h1 className="text-lg font-black text-[#041224] tracking-tight">
-          Prima neta cobrada <span className="font-normal text-gray-500 text-sm ml-2">por línea de negocio</span>
+      {/* Title Row - EXACTLY like Power BI */}
+      <div className="flex items-center justify-between mb-3 px-1">
+        <h1 className="text-xl font-bold text-[#333] tracking-tight">
+          Prima neta cobrada por línea de negocio
         </h1>
-        <div className="flex items-center gap-2">
-          <select id="year-select" name="year" value={year} onChange={e => setYear(e.target.value)} 
-            className="border border-gray-300 rounded px-2 py-1 text-sm bg-white">
-            <option>2026</option><option>2025</option>
-          </select>
-          <select id="month-select" name="month" value={month} onChange={e => setMonth(e.target.value)} 
-            className="border border-gray-300 rounded px-2 py-1 text-sm bg-white">
-            {MESES.map(m => <option key={m}>{m}</option>)}
-          </select>
+        <div className="flex items-center gap-3">
+          <div className="flex items-center gap-1">
+            <span className="text-xs text-gray-500">Año</span>
+            <select id="year-select" name="year" value={year} onChange={e => setYear(e.target.value)} 
+              className="border border-gray-300 rounded px-2 py-1 text-sm bg-white min-w-[80px]">
+              <option>2026</option><option>2025</option>
+            </select>
+          </div>
+          <div className="flex items-center gap-1">
+            <span className="text-xs text-gray-500">Mes</span>
+            <select id="month-select" name="month" value={month} onChange={e => setMonth(e.target.value)} 
+              className="border border-gray-300 rounded px-2 py-1 text-sm bg-white min-w-[100px]">
+              <option>Febrero</option><option>Enero</option><option>Marzo</option>
+            </select>
+          </div>
           <span className="text-xs text-gray-400">Datos al: {lastDataDate ?? "09/09/2025"}</span>
         </div>
       </div>
 
-      {/* Main Grid - Power BI Layout */}
+      {/* MAIN LAYOUT - Exactly like Power BI */}
       <div className="grid grid-cols-12 gap-3">
         
-        {/* LEFT COLUMN: Gauge + KPIs */}
+        {/* LEFT COLUMN: Gauge + KPIs + Tipo Cambio */}
         <div className="col-span-5 space-y-3">
-          {/* TACÓMETRO - Larger and prominent */}
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-3" style={{ height: 340 }}>
+          {/* GAUGE */}
+          <div className="bg-white rounded shadow-sm border border-gray-200 p-2" style={{ height: 320 }}>
             <Gauge 
               value={Math.round(gV * 10) / 10} 
               prevYear={Math.round(gP * 10) / 10} 
@@ -93,108 +97,108 @@ export default function HomePage() {
             />
           </div>
 
-          {/* KPI Row - Like Power BI with colored boxes */}
-          <div className="grid grid-cols-3 gap-2">
-            {/* Cumplimiento - RED/GREEN based on value */}
-            <div className={`rounded-lg p-3 ${cumpl >= 100 ? 'bg-emerald-600' : 'bg-red-600'} text-white shadow-sm`}>
-              <div className="text-[10px] uppercase tracking-wide opacity-80 mb-1">Cumplimiento</div>
-              <div className="text-2xl font-black">{cumpl}%</div>
-              <div className="text-[10px] opacity-70">del presupuesto</div>
-            </div>
+          {/* CUMPLIMIENTO - RED BOX like Power BI */}
+          <div className="bg-[#C53030] rounded shadow-sm p-4 text-white">
+            <div className="text-sm font-medium opacity-90 mb-1">Cumplimiento del presupuesto</div>
+            <div className="text-5xl font-black">{cumpl} %</div>
+          </div>
 
-            {/* Crecimiento - GREEN/RED based on value */}
-            <div className={`rounded-lg p-3 ${crec >= 0 ? 'bg-emerald-600' : 'bg-red-600'} text-white shadow-sm`}>
-              <div className="text-[10px] uppercase tracking-wide opacity-80 mb-1">Crecimiento</div>
-              <div className="text-2xl font-black">{crec >= 0 ? '+' : ''}{crec}%</div>
-              <div className="text-[10px] opacity-70">vs año anterior</div>
-            </div>
+          {/* CRECIMIENTO - GREEN BOX like Power BI */}
+          <div className="bg-[#38A169] rounded shadow-sm p-4 text-white">
+            <div className="text-sm font-medium opacity-90 mb-1">Crecimiento de la prima neta actual frente al año anterior *</div>
+            <div className="text-4xl font-black">{crec >= 0 ? '↑' : '↓'} {Math.abs(crec)}%</div>
+          </div>
 
-            {/* Tipo de Cambio - Dark with green accents */}
-            <div className="bg-[#041224] rounded-lg p-3 text-white shadow-sm relative overflow-hidden">
-              {/* Green accent lines */}
-              <div className="absolute top-0 left-0 w-1 h-full bg-emerald-500"></div>
-              <div className="absolute bottom-0 right-0 w-8 h-1 bg-emerald-500 opacity-50"></div>
-              
-              <div className="text-[9px] uppercase tracking-wide text-emerald-400 mb-1">Tipo de Cambio</div>
-              <div className="flex items-baseline gap-1">
-                <span className="text-[10px] text-gray-400">USD</span>
-                <span className="text-lg font-black">${fx.usd.toFixed(2)}</span>
+          {/* TIPO DE CAMBIO - Separate box like Power BI */}
+          <div className="bg-white rounded shadow-sm border border-gray-200 p-3">
+            <div className="text-xs font-bold text-gray-700 mb-2 uppercase">Tipo de cambio</div>
+            <div className="space-y-2">
+              <div className="flex justify-between items-center border-b border-gray-100 pb-2">
+                <span className="text-sm text-[#2B6CB0] font-medium">Dólar</span>
+                <span className="text-lg font-bold text-gray-900">${fx.usd.toFixed(2)}</span>
               </div>
-              <div className="flex items-baseline gap-1">
-                <span className="text-[10px] text-gray-400">DOP</span>
-                <span className="text-lg font-black">${fx.dop.toFixed(2)}</span>
+              <div className="flex justify-between items-center">
+                <span className="text-sm text-gray-600">Peso Dominicano</span>
+                <span className="text-lg font-bold text-gray-900">${fx.dop.toFixed(2)}</span>
               </div>
             </div>
           </div>
         </div>
 
-        {/* RIGHT COLUMN: Table */}
-        <div className="col-span-7">
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden h-full flex flex-col">
-            <table className="w-full text-sm">
+        {/* RIGHT COLUMN: Table + Chart */}
+        <div className="col-span-7 space-y-3">
+          {/* TABLE - Like Power BI */}
+          <div className="bg-white rounded shadow-sm border border-gray-200 overflow-hidden">
+            <table className="w-full text-xs">
               <thead>
-                <tr className="bg-[#041224] text-white border-b-[3px] border-b-[#E62800]">
-                  <th className="text-left px-3 py-2 font-bold text-[11px] uppercase tracking-wide">Línea de Negocio</th>
-                  <th className="text-right px-3 py-2 font-bold text-[11px] uppercase tracking-wide">Prima Neta</th>
-                  <th className="text-right px-3 py-2 font-bold text-[11px] uppercase tracking-wide">Año Anterior</th>
-                  <th className="text-right px-3 py-2 font-bold text-[11px] uppercase tracking-wide">Presupuesto</th>
+                <tr className="bg-[#2D3748] text-white">
+                  <th className="text-left px-3 py-2 font-semibold">Línea</th>
+                  <th className="text-right px-3 py-2 font-semibold">Prima Neta</th>
+                  <th className="text-right px-3 py-2 font-semibold">Año Anterior *</th>
+                  <th className="text-right px-3 py-2 font-semibold">Presupuesto</th>
+                  <th className="text-right px-3 py-2 font-semibold">Diferencia</th>
                 </tr>
               </thead>
               <tbody>
-                {lineas.map((l, i) => (
-                  <tr key={l.nombre} className={`border-b border-gray-100 ${i % 2 ? 'bg-gray-50' : 'bg-white'} hover:bg-orange-50 transition-colors`}>
-                    <td className="px-3 py-2 font-medium text-gray-900 text-xs">{l.nombre}</td>
-                    <td className="px-3 py-2 text-right font-semibold text-gray-900 text-xs">{fmt(l.primaNeta)}</td>
-                    <td className="px-3 py-2 text-right text-gray-600 text-xs">{fmt(l.anioAnterior)}</td>
-                    <td className="px-3 py-2 text-right text-gray-600 text-xs">{fmt(l.presupuesto)}</td>
-                  </tr>
-                ))}
-                <tr className="bg-[#041224] text-white">
-                  <td className="px-3 py-2.5 font-bold text-xs">Total</td>
-                  <td className="px-3 py-2.5 text-right font-bold text-xs">{fmt(total)}</td>
-                  <td className="px-3 py-2.5 text-right font-bold text-xs">{fmt(totalAA)}</td>
-                  <td className="px-3 py-2.5 text-right font-bold text-xs">{fmt(totalPpto)}</td>
+                {lineas.map((l, i) => {
+                  const diff = l.primaNeta - l.presupuesto
+                  return (
+                    <tr key={l.nombre} className={`border-b border-gray-100 ${i % 2 ? 'bg-gray-50' : 'bg-white'}`}>
+                      <td className="px-3 py-1.5 font-medium text-gray-900">{l.nombre}</td>
+                      <td className="px-3 py-1.5 text-right text-gray-900">{fmt(l.primaNeta)}</td>
+                      <td className="px-3 py-1.5 text-right text-gray-600">{fmt(l.anioAnterior)}</td>
+                      <td className="px-3 py-1.5 text-right text-gray-600">{fmt(l.presupuesto)}</td>
+                      <td className={`px-3 py-1.5 text-right font-medium ${diff >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                        ({fmt(Math.abs(diff))})
+                      </td>
+                    </tr>
+                  )
+                })}
+                <tr className="bg-[#2D3748] text-white font-bold">
+                  <td className="px-3 py-2">Total</td>
+                  <td className="px-3 py-2 text-right">{fmt(total)}</td>
+                  <td className="px-3 py-2 text-right">{fmt(totalAA)}</td>
+                  <td className="px-3 py-2 text-right">{fmt(totalPpto)}</td>
+                  <td className="px-3 py-2 text-right text-red-300">({fmt(Math.abs(total - totalPpto))})</td>
                 </tr>
               </tbody>
             </table>
             <Link href="/tabla-detalle" 
-              className="block bg-gradient-to-r from-orange-50 to-orange-100 text-center py-2 text-xs font-semibold text-orange-700 hover:from-orange-100 hover:to-orange-200 transition-all mt-auto">
+              className="block bg-orange-50 text-center py-1.5 text-xs font-medium text-orange-700 hover:bg-orange-100 transition-colors border-t border-gray-200">
               Ver detalle con drill-down →
             </Link>
           </div>
-        </div>
 
-        {/* CHART - Full width below */}
-        <div className="col-span-12 bg-white rounded-lg shadow-sm border border-gray-200 p-4">
-          <div className="flex items-center justify-between mb-3">
-            <h3 className="text-sm font-bold text-gray-900">Prima Neta por Línea</h3>
-            <div className="flex items-center gap-4">
-              <div className="flex items-center gap-1.5">
-                <span className="w-3 h-3 bg-[#041224] rounded-sm"></span>
-                <span className="text-xs text-gray-600">Prima cobrada</span>
-              </div>
-              <div className="flex items-center gap-1.5">
-                <span className="w-3 h-3 bg-gray-300 rounded-sm"></span>
-                <span className="text-xs text-gray-600">Presupuesto</span>
+          {/* CHART - Like Power BI horizontal bars */}
+          <div className="bg-white rounded shadow-sm border border-gray-200 p-3">
+            <div className="flex items-center justify-between mb-2">
+              <div className="flex items-center gap-4 text-xs">
+                <div className="flex items-center gap-1.5">
+                  <span className="w-3 h-3 bg-[#2D3748] rounded-sm"></span>
+                  <span className="text-gray-600">PN Efectuada</span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <span className="w-3 h-3 bg-[#A0AEC0] rounded-sm"></span>
+                  <span className="text-gray-600">Presupuesto</span>
+                </div>
               </div>
             </div>
-          </div>
-          <div ref={chartRef} className="w-full" style={{ height: 240 }}>
-            {chartReady && chartData.length > 0 && (
-              <ResponsiveContainer width="100%" height={240}>
-                <BarChart layout="vertical" data={chartData} margin={{ top: 5, right: 100, left: 20, bottom: 5 }} barGap={6}>
-                  <XAxis type="number" hide />
-                  <YAxis type="category" dataKey="nombre" width={130} tick={{ fontSize: 12, fill: '#374151', fontWeight: 600 }} axisLine={false} tickLine={false} />
-                  <Tooltip formatter={(v) => `$${v}M`} />
-                  <Bar dataKey="value" fill="#041224" radius={[0, 6, 6, 0]} barSize={24}>
-                    <LabelList dataKey="value" position="right" formatter={(v: unknown) => `$${v}M`} style={{ fontSize: 12, fontWeight: 700, fill: '#374151' }} />
-                  </Bar>
-                  <Bar dataKey="ppto" fill="#D1D5DB" radius={[0, 6, 6, 0]} barSize={24}>
-                    <LabelList dataKey="ppto" position="right" formatter={(v: unknown) => `$${v}M`} style={{ fontSize: 10, fill: '#9CA3AF' }} />
-                  </Bar>
-                </BarChart>
-              </ResponsiveContainer>
-            )}
+            <div ref={chartRef} style={{ height: 200 }}>
+              {chartReady && chartData.length > 0 && (
+                <ResponsiveContainer width="100%" height={200}>
+                  <BarChart layout="vertical" data={chartData} margin={{ top: 5, right: 60, left: 5, bottom: 5 }} barGap={2}>
+                    <XAxis type="number" hide />
+                    <YAxis type="category" dataKey="nombre" width={110} tick={{ fontSize: 10, fill: '#4A5568' }} axisLine={false} tickLine={false} />
+                    <Bar dataKey="pn" fill="#2D3748" radius={[0, 3, 3, 0]} barSize={14}>
+                      <LabelList dataKey="pn" position="right" formatter={(v: unknown) => `$${v}M`} style={{ fontSize: 9, fill: '#4A5568' }} />
+                    </Bar>
+                    <Bar dataKey="ppto" fill="#A0AEC0" radius={[0, 3, 3, 0]} barSize={14}>
+                      <LabelList dataKey="ppto" position="right" formatter={(v: unknown) => `$${v}M`} style={{ fontSize: 9, fill: '#A0AEC0' }} />
+                    </Bar>
+                  </BarChart>
+                </ResponsiveContainer>
+              )}
+            </div>
           </div>
         </div>
       </div>
