@@ -31,8 +31,8 @@ export function Gauge({ value, prevYear = 88.9, budget = 129.5 }: GaugeProps) {
     return () => cancelAnimationFrame(raf.current)
   }, [pct])
 
-  const cx = 150, cy = 130
-  const ro = 110, ri = 75
+  const cx = 180, cy = 160
+  const ro = 130, ri = 90
   const startA = 150, sweepA = 240
 
   const toXY = (deg: number, r: number) => {
@@ -52,15 +52,23 @@ export function Gauge({ value, prevYear = 88.9, budget = 129.5 }: GaugeProps) {
   // Needle
   const na = p2a(anim)
   const nRad = (na * Math.PI) / 180
-  const nLen = ro + 5
+  const nLen = ro + 8
   const tip = { x: cx + nLen * Math.cos(nRad), y: cy + nLen * Math.sin(nRad) }
-  const bw = 3
+  const bw = 4
   const b1 = { x: cx + bw * Math.cos(nRad + Math.PI / 2), y: cy + bw * Math.sin(nRad + Math.PI / 2) }
   const b2 = { x: cx - bw * Math.cos(nRad + Math.PI / 2), y: cy - bw * Math.sin(nRad + Math.PI / 2) }
 
+  // Scale labels at key points
+  const scaleLabels = [
+    { pct: 0, label: "$0M" },
+    { pct: pyPct, label: `$${prevYear}M`, color: "#991B1B" },
+    { pct: budPct, label: `$${budget}M`, color: "#166534" },
+    { pct: 1, label: `$${max}M` },
+  ]
+
   return (
-    <div className="w-full h-full flex flex-col items-center justify-center">
-      <svg viewBox="0 0 300 180" className="w-full max-w-[280px]" preserveAspectRatio="xMidYMid meet">
+    <div className="w-full h-full flex flex-col items-center justify-center p-2">
+      <svg viewBox="0 0 360 220" className="w-full" preserveAspectRatio="xMidYMid meet">
         <defs>
           <linearGradient id="redZone" x1="0%" y1="0%" x2="100%" y2="0%">
             <stop offset="0%" stopColor="#DC2626" />
@@ -74,7 +82,7 @@ export function Gauge({ value, prevYear = 88.9, budget = 129.5 }: GaugeProps) {
             <stop offset="0%" stopColor="#10B981" />
             <stop offset="100%" stopColor="#34D399" />
           </linearGradient>
-          <filter id="glow"><feDropShadow dx="0" dy="2" stdDeviation="3" floodOpacity="0.15" /></filter>
+          <filter id="shadow"><feDropShadow dx="0" dy="2" stdDeviation="3" floodOpacity="0.2" /></filter>
         </defs>
 
         {/* Background track */}
@@ -85,29 +93,40 @@ export function Gauge({ value, prevYear = 88.9, budget = 129.5 }: GaugeProps) {
         <path d={descArc(z1e, z2e, ro, ri)} fill="url(#yellowZone)" />
         <path d={descArc(z2e, startA + sweepA, ro, ri)} fill="url(#greenZone)" />
 
-        {/* Zone markers */}
+        {/* Zone markers - white lines */}
         {[pyPct, budPct].map((pctVal, i) => {
           const angle = p2a(pctVal)
-          const o = toXY(angle, ro + 2), inner = toXY(angle, ri - 2)
-          return <line key={i} x1={o.x} y1={o.y} x2={inner.x} y2={inner.y} stroke="white" strokeWidth="2" />
+          const o = toXY(angle, ro + 3), inner = toXY(angle, ri - 3)
+          return <line key={i} x1={o.x} y1={o.y} x2={inner.x} y2={inner.y} stroke="white" strokeWidth="3" />
+        })}
+
+        {/* Scale labels outside the arc */}
+        {scaleLabels.map((s, i) => {
+          const angle = p2a(s.pct)
+          const pos = toXY(angle, ro + 18)
+          return (
+            <text key={i} x={pos.x} y={pos.y} fontSize="11" fill={s.color || "#6B7280"} 
+              textAnchor="middle" dominantBaseline="middle" fontWeight="700">
+              {s.label}
+            </text>
+          )
         })}
 
         {/* Needle */}
-        <polygon points={`${tip.x},${tip.y} ${b1.x},${b1.y} ${b2.x},${b2.y}`} fill="#1F2937" filter="url(#glow)" />
-        <circle cx={cx} cy={cy} r={8} fill="#374151" />
-        <circle cx={cx} cy={cy} r={4} fill="#6B7280" />
+        <polygon points={`${tip.x},${tip.y} ${b1.x},${b1.y} ${b2.x},${b2.y}`} fill="#1F2937" filter="url(#shadow)" />
+        <circle cx={cx} cy={cy} r={10} fill="#374151" />
+        <circle cx={cx} cy={cy} r={5} fill="#6B7280" />
 
-        {/* Center value */}
-        <text x={cx} y={cy - 15} fontSize="36" fill="#111827" textAnchor="middle" fontWeight="900" fontFamily="system-ui">
+        {/* Center value - BIG and BOLD */}
+        <text x={cx} y={cy - 20} fontSize="48" fill="#111827" textAnchor="middle" fontWeight="900" fontFamily="system-ui">
           ${value.toFixed(1)}M
         </text>
+
+        {/* Budget text - PROPERLY SPACED */}
+        <text x={cx} y={cy + 15} fontSize="14" fill="#6B7280" textAnchor="middle" fontFamily="system-ui">
+          de <tspan fill="#111827" fontWeight="700">${budget}M</tspan> presupuesto
+        </text>
       </svg>
-      
-      {/* Budget info - BELOW gauge, clean */}
-      <div className="text-center mt-1">
-        <span className="text-[11px] text-gray-500">Meta: </span>
-        <span className="text-[13px] font-bold text-gray-800">${budget}M</span>
-      </div>
     </div>
   )
 }

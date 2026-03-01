@@ -10,7 +10,7 @@ import {
   getTipoCambio, getLastDataDate,
 } from "@/lib/queries"
 import type { FxRates } from "@/lib/queries"
-import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, LabelList } from "recharts"
+import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, LabelList, Tooltip } from "recharts"
 
 function fmt(v: number) {
   return new Intl.NumberFormat("es-MX", { style: "currency", currency: "MXN", minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(v)
@@ -49,149 +49,183 @@ export default function HomePage() {
   const gB = totalPpto / 1e6
   const gP = totalAA / 1e6
 
+  const now = mounted ? new Date() : new Date(2026, 1, 28)
+  const dim = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate()
+  const dp = now.getDate()
+
   const chartData = [...lineas].sort((a, b) => a.primaNeta - b.primaNeta).map(l => ({
     nombre: l.nombre,
     value: +(l.primaNeta / 1e6).toFixed(1),
+    ppto: +(l.presupuesto / 1e6).toFixed(1),
   }))
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-100">
       <PageTabs />
 
       {/* Header */}
       <div className="flex items-center justify-between mb-4">
         <div>
-          <h1 className="text-lg font-bold text-gray-900">Prima Neta Cobrada</h1>
-          <p className="text-xs text-gray-500">Por línea de negocio</p>
+          <h1 className="text-lg font-bold text-gray-900 uppercase tracking-wide">Prima Neta Cobrada</h1>
+          <p className="text-xs text-gray-500">por línea de negocio</p>
         </div>
         <div className="flex items-center gap-2">
-          <select value={year} onChange={e => setYear(e.target.value)} className="border border-gray-300 rounded-lg px-3 py-1.5 text-sm bg-white">
+          <select value={year} onChange={e => setYear(e.target.value)} className="border border-gray-300 rounded px-2 py-1 text-sm bg-white">
             <option>2026</option><option>2025</option>
           </select>
-          <select value={month} onChange={e => setMonth(e.target.value)} className="border border-gray-300 rounded-lg px-3 py-1.5 text-sm bg-white">
+          <select value={month} onChange={e => setMonth(e.target.value)} className="border border-gray-300 rounded px-2 py-1 text-sm bg-white">
             {MESES.map(m => <option key={m}>{m}</option>)}
           </select>
           {lastDataDate && <span className="text-xs text-gray-400 ml-2">Datos al: {lastDataDate}</span>}
         </div>
       </div>
 
-      {/* Main Grid */}
-      <div className="grid grid-cols-12 gap-4">
-        
-        {/* LEFT: Gauge */}
-        <div className="col-span-4 bg-white rounded-xl shadow-sm border border-gray-200 p-4">
+      {/* Main Row: Gauge + Table */}
+      <div className="grid grid-cols-12 gap-4 mb-4">
+        {/* Gauge */}
+        <div className="col-span-5 bg-white rounded-lg shadow-sm border border-gray-200 p-3" style={{ minHeight: 280 }}>
           <Gauge value={Math.round(gV * 10) / 10} prevYear={Math.round(gP * 10) / 10} budget={Math.round(gB * 10) / 10} />
         </div>
 
-        {/* RIGHT: Table */}
-        <div className="col-span-8 bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+        {/* Table */}
+        <div className="col-span-7 bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
           <table className="w-full text-sm">
             <thead>
               <tr className="bg-gray-900 text-white">
-                <th className="text-left px-4 py-3 font-semibold">Línea</th>
-                <th className="text-right px-4 py-3 font-semibold">Prima Neta</th>
-                <th className="text-right px-4 py-3 font-semibold">Año Anterior</th>
-                <th className="text-right px-4 py-3 font-semibold">Presupuesto</th>
+                <th className="text-left px-3 py-2.5 font-semibold">Línea de Negocio</th>
+                <th className="text-right px-3 py-2.5 font-semibold">Prima Neta</th>
+                <th className="text-right px-3 py-2.5 font-semibold">Año Anterior</th>
+                <th className="text-right px-3 py-2.5 font-semibold">Presupuesto</th>
               </tr>
             </thead>
             <tbody>
               {lineas.map((l, i) => (
                 <tr key={l.nombre} className={`border-b border-gray-100 ${i % 2 ? 'bg-gray-50' : 'bg-white'} hover:bg-orange-50 transition-colors`}>
-                  <td className="px-4 py-2.5 font-medium text-gray-900">{l.nombre}</td>
-                  <td className="px-4 py-2.5 text-right font-semibold text-gray-900">{fmt(l.primaNeta)}</td>
-                  <td className="px-4 py-2.5 text-right text-gray-600">{fmt(l.anioAnterior)}</td>
-                  <td className="px-4 py-2.5 text-right text-gray-600">{fmt(l.presupuesto)}</td>
+                  <td className="px-3 py-2 font-medium text-gray-900">{l.nombre}</td>
+                  <td className="px-3 py-2 text-right font-semibold text-gray-900">{fmt(l.primaNeta)}</td>
+                  <td className="px-3 py-2 text-right text-gray-600">{fmt(l.anioAnterior)}</td>
+                  <td className="px-3 py-2 text-right text-gray-600">{fmt(l.presupuesto)}</td>
                 </tr>
               ))}
               <tr className="bg-gray-900 text-white">
-                <td className="px-4 py-2.5 font-bold">Total</td>
-                <td className="px-4 py-2.5 text-right font-bold">{fmt(total)}</td>
-                <td className="px-4 py-2.5 text-right font-bold">{fmt(totalAA)}</td>
-                <td className="px-4 py-2.5 text-right font-bold">{fmt(totalPpto)}</td>
+                <td className="px-3 py-2.5 font-bold">Total</td>
+                <td className="px-3 py-2.5 text-right font-bold">{fmt(total)}</td>
+                <td className="px-3 py-2.5 text-right font-bold">{fmt(totalAA)}</td>
+                <td className="px-3 py-2.5 text-right font-bold">{fmt(totalPpto)}</td>
               </tr>
             </tbody>
           </table>
-          <Link href="/tabla-detalle" className="block bg-gray-100 text-center py-2 text-xs font-semibold text-gray-700 hover:bg-gray-200 transition-colors">
+          <Link href="/tabla-detalle" className="block bg-gray-100 text-center py-2 text-xs font-semibold text-orange-600 hover:bg-orange-50 transition-colors border-t border-gray-200">
             Ver detalle completo →
           </Link>
         </div>
+      </div>
 
-        {/* KPI Row */}
-        <div className="col-span-3 bg-white rounded-xl shadow-sm border border-gray-200 p-4">
-          <div className="flex items-center gap-3">
-            <svg viewBox="0 0 36 36" className="w-14 h-14">
-              <circle cx="18" cy="18" r="15" fill="none" stroke="#E5E7EB" strokeWidth="4" />
-              <circle cx="18" cy="18" r="15" fill="none"
+      {/* KPI Cards Row */}
+      <div className="grid grid-cols-4 gap-4 mb-4">
+        {/* Cumplimiento */}
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
+          <div className="flex items-center gap-4">
+            <svg viewBox="0 0 40 40" className="w-16 h-16 flex-shrink-0">
+              <circle cx="20" cy="20" r="17" fill="none" stroke="#E5E7EB" strokeWidth="5" />
+              <circle cx="20" cy="20" r="17" fill="none"
                 stroke={cumpl >= 90 ? "#10B981" : cumpl >= 70 ? "#F59E0B" : "#EF4444"}
-                strokeWidth="4" strokeLinecap="round"
-                strokeDasharray={`${(cumpl / 100) * 94.2} 94.2`}
-                transform="rotate(-90 18 18)" />
-              <text x="18" y="20" fontSize="10" fill="#111" textAnchor="middle" fontWeight="700">{cumpl}%</text>
+                strokeWidth="5" strokeLinecap="round"
+                strokeDasharray={`${(cumpl / 100) * 106.8} 106.8`}
+                transform="rotate(-90 20 20)" />
+              <text x="20" y="22" fontSize="11" fill="#111" textAnchor="middle" fontWeight="800">{cumpl}%</text>
             </svg>
             <div>
-              <div className="text-xs font-semibold text-gray-900">Cumplimiento</div>
-              <div className="text-[10px] text-gray-500">del presupuesto</div>
-              <div className={`text-[11px] font-bold mt-0.5 ${cumpl >= 90 ? "text-emerald-600" : cumpl >= 70 ? "text-amber-600" : "text-red-600"}`}>
+              <div className="text-sm font-bold text-gray-900">Cumplimiento</div>
+              <div className="text-xs text-gray-500">del presupuesto</div>
+              <div className={`text-xs font-bold mt-1 ${cumpl >= 90 ? "text-emerald-600" : cumpl >= 70 ? "text-amber-600" : "text-red-600"}`}>
                 {cumpl >= 90 ? "✓ Meta alcanzada" : cumpl >= 70 ? "Cerca de meta" : "Por debajo"}
               </div>
             </div>
           </div>
         </div>
 
-        <div className="col-span-3 bg-white rounded-xl shadow-sm border border-gray-200 p-4">
-          <div className="flex items-center gap-3">
-            <div className={`w-12 h-12 rounded-full flex items-center justify-center ${crec >= 0 ? "bg-emerald-100" : "bg-red-100"}`}>
-              <span className={`text-xl font-bold ${crec >= 0 ? "text-emerald-600" : "text-red-600"}`}>{crec >= 0 ? "↑" : "↓"}</span>
+        {/* Crecimiento */}
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
+          <div className="flex items-center gap-4">
+            <div className={`w-14 h-14 rounded-full flex items-center justify-center ${crec >= 0 ? "bg-emerald-100" : "bg-red-100"}`}>
+              <span className={`text-2xl font-black ${crec >= 0 ? "text-emerald-600" : "text-red-600"}`}>{crec >= 0 ? "↑" : "↓"}</span>
             </div>
             <div>
               <div className={`text-2xl font-black ${crec >= 0 ? "text-emerald-600" : "text-red-600"}`}>{crec >= 0 ? "+" : ""}{crec}%</div>
-              <div className="text-[10px] text-gray-500">vs Año Anterior</div>
+              <div className="text-xs text-gray-500">vs Año Anterior</div>
             </div>
           </div>
         </div>
 
-        <div className="col-span-3 bg-gray-900 rounded-xl shadow-sm p-4 text-white">
-          <div className="text-[10px] text-gray-400 uppercase font-semibold tracking-wide mb-2">Tipo de Cambio</div>
-          <div className="flex justify-between items-center mb-2">
-            <span className="text-xs text-gray-400">USD</span>
-            <span className="text-lg font-bold">${fx.usd.toFixed(2)}</span>
+        {/* Tipo de Cambio */}
+        <div className="bg-gray-900 rounded-lg shadow-sm p-4 text-white">
+          <div className="text-[10px] text-gray-400 uppercase font-bold tracking-wide mb-3">Tipo de Cambio</div>
+          <div className="space-y-2">
+            <div className="flex justify-between items-center">
+              <span className="text-xs text-gray-400">Dólar USD</span>
+              <span className="text-xl font-black">${fx.usd.toFixed(2)}</span>
+            </div>
+            <div className="border-t border-gray-700"></div>
+            <div className="flex justify-between items-center">
+              <span className="text-xs text-gray-400">Peso Dominicano</span>
+              <span className="text-xl font-black">${fx.dop.toFixed(2)}</span>
+            </div>
           </div>
-          <div className="flex justify-between items-center">
-            <span className="text-xs text-gray-400">DOP</span>
-            <span className="text-lg font-bold">${fx.dop.toFixed(2)}</span>
-          </div>
+          {fx.fechaActualizacion && (
+            <div className="text-[9px] text-gray-500 mt-2 text-right">
+              {new Date(fx.fechaActualizacion).toLocaleString("es-MX", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })}
+            </div>
+          )}
         </div>
 
-        <div className={`col-span-3 rounded-xl shadow-sm border p-4 ${forecast >= totalPpto ? "bg-emerald-50 border-emerald-200" : "bg-red-50 border-red-200"}`}>
-          <div className="text-[10px] text-gray-500 uppercase font-semibold tracking-wide">Proyección</div>
+        {/* Proyección */}
+        <div className={`rounded-lg shadow-sm border p-4 ${forecast >= totalPpto ? "bg-emerald-50 border-emerald-200" : "bg-red-50 border-red-200"}`}>
+          <div className="text-[10px] text-gray-500 uppercase font-bold tracking-wide">Proyección al Cierre</div>
           <div className={`text-3xl font-black mt-1 ${forecast >= totalPpto ? "text-emerald-600" : "text-red-600"}`}>
             ${(forecast / 1e6).toFixed(1)}M
           </div>
-          <div className="text-[10px] text-gray-500 mt-1">Estimado al cierre</div>
+          <div className="flex items-center gap-2 mt-2">
+            <div className="flex-1 h-1.5 bg-gray-200 rounded-full overflow-hidden">
+              <div className={`h-full rounded-full ${forecast >= totalPpto ? "bg-emerald-500" : "bg-red-500"}`} style={{ width: `${Math.min(100, (dp / dim) * 100)}%` }} />
+            </div>
+            <span className="text-[10px] text-gray-500">{dp}/{dim} días</span>
+          </div>
+          <div className="text-[9px] text-gray-400 mt-1">Proyección lineal</div>
         </div>
+      </div>
 
-        {/* Chart */}
-        <div className="col-span-12 bg-white rounded-xl shadow-sm border border-gray-200 p-4">
-          <div className="flex items-center justify-between mb-3">
-            <h3 className="text-sm font-bold text-gray-900">Prima Neta por Línea</h3>
-            <div className="flex items-center gap-2">
+      {/* Chart */}
+      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
+        <div className="flex items-center justify-between mb-3">
+          <h3 className="text-sm font-bold text-gray-900">Prima Neta por Línea</h3>
+          <div className="flex items-center gap-4">
+            <div className="flex items-center gap-1.5">
               <span className="w-3 h-3 bg-gray-900 rounded-sm"></span>
-              <span className="text-xs text-gray-600">Millones MXN</span>
+              <span className="text-xs text-gray-600">Prima cobrada</span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <span className="w-3 h-3 bg-gray-300 rounded-sm"></span>
+              <span className="text-xs text-gray-600">Presupuesto</span>
             </div>
           </div>
-          <div ref={chartRef} style={{ height: 200 }}>
-            {chartReady && (
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart layout="vertical" data={chartData} margin={{ top: 5, right: 80, left: 10, bottom: 5 }} barSize={28}>
-                  <XAxis type="number" hide />
-                  <YAxis type="category" dataKey="nombre" width={130} tick={{ fontSize: 12, fill: '#374151' }} axisLine={false} tickLine={false} />
-                  <Bar dataKey="value" fill="#1F2937" radius={[0, 4, 4, 0]}>
-                    <LabelList dataKey="value" position="right" formatter={(v: unknown) => `$${v}M`} style={{ fontSize: 12, fontWeight: 600, fill: '#374151' }} />
-                  </Bar>
-                </BarChart>
-              </ResponsiveContainer>
-            )}
-          </div>
+        </div>
+        <div ref={chartRef} style={{ height: 220 }}>
+          {chartReady && (
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart layout="vertical" data={chartData} margin={{ top: 5, right: 90, left: 10, bottom: 5 }} barGap={4}>
+                <XAxis type="number" hide />
+                <YAxis type="category" dataKey="nombre" width={130} tick={{ fontSize: 12, fill: '#374151' }} axisLine={false} tickLine={false} />
+                <Tooltip formatter={(v) => `$${v}M`} />
+                <Bar dataKey="value" fill="#1F2937" radius={[0, 4, 4, 0]} barSize={22}>
+                  <LabelList dataKey="value" position="right" formatter={(v: unknown) => `$${v}M`} style={{ fontSize: 11, fontWeight: 700, fill: '#374151' }} />
+                </Bar>
+                <Bar dataKey="ppto" fill="#D1D5DB" radius={[0, 4, 4, 0]} barSize={22}>
+                  <LabelList dataKey="ppto" position="right" formatter={(v: unknown) => `$${v}M`} style={{ fontSize: 10, fill: '#9CA3AF' }} />
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
+          )}
         </div>
       </div>
 
