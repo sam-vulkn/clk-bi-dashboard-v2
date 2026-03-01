@@ -385,20 +385,20 @@ export default function TablaDetallePage() {
       {/* Filter bar */}
       <div className="flex items-center gap-2 mb-3 flex-wrap">
         <div className="flex items-center gap-1.5 text-xs">
-          <label className="text-gray-500 font-medium">Año</label>
-          <select value={year} onChange={e => setYear(e.target.value)} className="border border-[#E5E7EB] rounded px-2 py-1 text-xs bg-white">
+          <label htmlFor="td-year" className="text-gray-500 font-medium">Año</label>
+          <select id="td-year" name="year" value={year} onChange={e => setYear(e.target.value)} className="border border-[#E5E7EB] rounded px-2 py-1 text-xs bg-white">
             <option>2026</option><option>2025</option><option>2024</option>
           </select>
         </div>
         <div className="flex items-center gap-1.5 text-xs">
-          <label className="text-gray-500 font-medium">Mes</label>
-          <select value={month} onChange={e => setMonth(e.target.value)} className="border border-[#E5E7EB] rounded px-2 py-1 text-xs bg-white">
+          <label htmlFor="td-month" className="text-gray-500 font-medium">Mes</label>
+          <select id="td-month" name="month" value={month} onChange={e => setMonth(e.target.value)} className="border border-[#E5E7EB] rounded px-2 py-1 text-xs bg-white">
             {Object.keys(MESES).map(m => <option key={m}>{m}</option>)}
           </select>
         </div>
         <div className="flex items-center gap-1.5 text-xs">
-          <label className="text-gray-500 font-medium">Comparar</label>
-          <select value={compareMode} onChange={e => setCompareMode(e.target.value as typeof compareMode)} className="border border-[#E5E7EB] rounded px-2 py-1 text-xs bg-white">
+          <label htmlFor="td-compare" className="text-gray-500 font-medium">Comparar</label>
+          <select id="td-compare" name="compare" value={compareMode} onChange={e => setCompareMode(e.target.value as typeof compareMode)} className="border border-[#E5E7EB] rounded px-2 py-1 text-xs bg-white">
             <option value="yoy">Vs Año Anterior</option>
             <option value="mom">Vs Mes Anterior</option>
             <option value="qoq">Vs Trimestre Anterior</option>
@@ -408,6 +408,8 @@ export default function TablaDetallePage() {
         <div className="relative ml-auto">
           <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" />
           <input
+            id="td-search"
+            name="search"
             value={search}
             onChange={e => handleSearchChange(e.target.value)}
             onFocus={() => searchResults.length > 0 && setShowSearchDropdown(true)}

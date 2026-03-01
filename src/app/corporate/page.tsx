@@ -132,10 +132,10 @@ export default function CorporatePage() {
 
       {/* Filters */}
       <div className="flex items-center gap-2 mb-3 flex-wrap">
-        <select value={year} onChange={e => setYear(e.target.value)} className="border border-[#E5E7EB] rounded px-2 py-1 text-xs bg-white">
+        <select id="filter-select" name="filter" value={year} onChange={e => setYear(e.target.value)} className="border border-[#E5E7EB] rounded px-2 py-1 text-xs bg-white">
           <option>2026</option><option>2025</option><option>2024</option>
         </select>
-        <select value={month} onChange={e => setMonth(e.target.value)} className="border border-[#E5E7EB] rounded px-2 py-1 text-xs bg-white">
+        <select id="filter-select" name="filter" value={month} onChange={e => setMonth(e.target.value)} className="border border-[#E5E7EB] rounded px-2 py-1 text-xs bg-white">
           {Object.keys(MESES).map(m => <option key={m}>{m}</option>)}
         </select>
         <div className="relative ml-auto">

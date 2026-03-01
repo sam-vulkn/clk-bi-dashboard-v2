@@ -70,10 +70,10 @@ export default function HomePage() {
           <p className="text-xs text-gray-500">por línea de negocio</p>
         </div>
         <div className="flex items-center gap-2">
-          <select value={year} onChange={e => setYear(e.target.value)} className="border border-gray-300 rounded px-2 py-1 text-sm bg-white">
+          <select id="year-select" name="year" value={year} onChange={e => setYear(e.target.value)} className="border border-gray-300 rounded px-2 py-1 text-sm bg-white">
             <option>2026</option><option>2025</option>
           </select>
-          <select value={month} onChange={e => setMonth(e.target.value)} className="border border-gray-300 rounded px-2 py-1 text-sm bg-white">
+          <select id="month-select" name="month" value={month} onChange={e => setMonth(e.target.value)} className="border border-gray-300 rounded px-2 py-1 text-sm bg-white">
             {MESES.map(m => <option key={m}>{m}</option>)}
           </select>
           {lastDataDate && <span className="text-xs text-gray-400 ml-2">Datos al: {lastDataDate}</span>}

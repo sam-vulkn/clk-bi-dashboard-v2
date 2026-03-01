@@ -87,8 +87,8 @@ export function Sidebar() {
               className={`block px-3 py-2 text-sm rounded-lg transition-colors ${isActive("/corporate") ? "bg-gray-900 text-white" : "text-gray-700 hover:bg-gray-100"}`}>
               Corporate
             </Link>
-            <Link href="/convenios" onClick={() => setOpen(false)}
-              className={`block px-3 py-2 text-sm rounded-lg transition-colors ${isActive("/convenios") || isActive("/cobranza") ? "bg-gray-900 text-white" : "text-gray-700 hover:bg-gray-100"}`}>
+            <Link href="/cobranza" onClick={() => setOpen(false)}
+              className={`block px-3 py-2 text-sm rounded-lg transition-colors ${isActive("/cobranza") ? "bg-gray-900 text-white" : "text-gray-700 hover:bg-gray-100"}`}>
               Convenios
             </Link>
           </div>

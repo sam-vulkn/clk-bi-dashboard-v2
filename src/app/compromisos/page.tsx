@@ -51,10 +51,10 @@ export default function CompromisosPage() {
       <div className="flex items-center justify-between mb-3">
         <h1 className="text-base font-bold text-[#111] font-lato">Compromisos de Venta</h1>
         <div className="flex items-center gap-2">
-          <select value={year} onChange={e => setYear(Number(e.target.value))} className="border border-[#E5E7EB] rounded px-2 py-1 text-xs bg-white">
+          <select id="filter-select" name="filter" value={year} onChange={e => setYear(Number(e.target.value))} className="border border-[#E5E7EB] rounded px-2 py-1 text-xs bg-white">
             <option>2026</option><option>2025</option>
           </select>
-          <select value={month} onChange={e => setMonth(Number(e.target.value))} className="border border-[#E5E7EB] rounded px-2 py-1 text-xs bg-white">
+          <select id="filter-select" name="filter" value={month} onChange={e => setMonth(Number(e.target.value))} className="border border-[#E5E7EB] rounded px-2 py-1 text-xs bg-white">
             {["Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"].map((m, i) => (
               <option key={i+1} value={i+1}>{m}</option>
             ))}
