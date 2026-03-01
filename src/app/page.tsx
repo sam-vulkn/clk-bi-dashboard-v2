@@ -7,243 +7,191 @@ import { PageTabs } from "@/components/page-tabs"
 import { PageFooter } from "@/components/page-footer"
 import {
   SEED_LINEAS, SEED_PRESUPUESTO, SEED_FX,
-  getTipoCambio, getDataFreshness, getLastDataDate,
+  getTipoCambio, getLastDataDate,
 } from "@/lib/queries"
 import type { FxRates } from "@/lib/queries"
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, ResponsiveContainer, LabelList, Cell } from "recharts"
+import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, LabelList } from "recharts"
 
 function fmt(v: number) {
   return new Intl.NumberFormat("es-MX", { style: "currency", currency: "MXN", minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(v)
 }
 
-const MESES: Record<string, number> = {
-  Enero: 1, Febrero: 2, Marzo: 3, Abril: 4, Mayo: 5, Junio: 6,
-  Julio: 7, Agosto: 8, Septiembre: 9, Octubre: 10, Noviembre: 11, Diciembre: 12,
-}
-
-interface DL { nombre: string; primaNeta: number; presupuesto: number; anioAnterior: number }
+const MESES = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"]
 
 export default function HomePage() {
   const [year, setYear] = useState("2026")
   const [month, setMonth] = useState("Febrero")
-  const [lineas] = useState<DL[]>(SEED_LINEAS.map(l => ({ nombre: l.nombre, primaNeta: l.primaNeta, presupuesto: l.presupuesto, anioAnterior: l.anioAnterior })))
+  const lineas = SEED_LINEAS.map(l => ({ ...l }))
   const [fx, setFx] = useState<FxRates & { fechaActualizacion?: string }>(SEED_FX)
-  const [fxLoading, setFxLoading] = useState(true)
-  const [staleHours, setStaleHours] = useState<number | null>(null)
   const [lastDataDate, setLastDataDate] = useState<string | null>(null)
   const [mounted, setMounted] = useState(false)
   const [chartReady, setChartReady] = useState(false)
   const chartRef = useRef<HTMLDivElement>(null)
 
-  useEffect(() => { setMounted(true); document.title = "Tacómetro | CLK BI Dashboard" }, [])
+  useEffect(() => { 
+    setMounted(true)
+    document.title = "Tacómetro | CLK BI Dashboard"
+    setTimeout(() => setChartReady(true), 150)
+  }, [])
   
-  // Wait for chart container to have dimensions before rendering
-  useEffect(() => {
-    if (!mounted) return
-    const timer = setTimeout(() => {
-      if (chartRef.current && chartRef.current.offsetHeight > 0) {
-        setChartReady(true)
-      }
-    }, 100)
-    return () => clearTimeout(timer)
-  }, [mounted])
-  useEffect(() => { getTipoCambio().then(r => { if (r) setFx(r); setFxLoading(false) }).catch(() => setFxLoading(false)) }, [])
-  useEffect(() => { getDataFreshness().then(h => setStaleHours(h)) }, [])
+  useEffect(() => { getTipoCambio().then(r => { if (r) setFx(r) }) }, [])
   useEffect(() => { getLastDataDate().then(d => setLastDataDate(d)) }, [])
 
   const total = lineas.reduce((s, l) => s + l.primaNeta, 0)
   const totalPpto = lineas.reduce((s, l) => s + l.presupuesto, 0) || SEED_PRESUPUESTO
   const totalAA = lineas.reduce((s, l) => s + l.anioAnterior, 0)
-  const hasPpto = lineas.some(l => l.presupuesto > 0)
-  const hasAA = lineas.some(l => l.anioAnterior > 0)
 
-  // KPIs
-  const cumpl = hasPpto ? Math.round((total / totalPpto) * 100) : 76
-  const crec = hasAA ? Math.round(((total - totalAA) / totalAA) * 1000) / 10 : 10.8
+  const cumpl = Math.round((total / totalPpto) * 100)
+  const crec = Math.round(((total - totalAA) / totalAA) * 1000) / 10
+  const forecast = total * 1.05
 
-  const now = mounted ? new Date() : new Date(2026, 1, 28)
-  const dim = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate()
-  const dp = now.getDate()
-  const forecast = total * 1.05 // Seed data: project +5% (realistic)
+  const gV = total / 1e6
+  const gB = totalPpto / 1e6
+  const gP = totalAA / 1e6
 
-  // Gauge values
-  const gV = total / 1e6 || 98.5
-  const gB = hasPpto ? totalPpto / 1e6 : 129.5
-  const gP = hasAA ? totalAA / 1e6 : 88.9
-
-  // Chart data - sorted by prima descending for visual impact
   const chartData = [...lineas].sort((a, b) => a.primaNeta - b.primaNeta).map(l => ({
     nombre: l.nombre,
-    pn: +(l.primaNeta / 1e6).toFixed(1),
-    ppto: l.presupuesto ? +(l.presupuesto / 1e6).toFixed(1) : 0,
+    value: +(l.primaNeta / 1e6).toFixed(1),
   }))
 
   return (
-    <div className="flex flex-col h-[calc(100vh-48px)] overflow-hidden">
+    <div className="min-h-screen bg-gray-50">
       <PageTabs />
 
-      {/* Title bar */}
-      <div className="flex items-center justify-between mb-2 flex-shrink-0">
-        <div className="flex items-baseline gap-2">
-          <span className="text-xs font-bold text-[#041224] tracking-wide uppercase">Prima neta cobrada</span>
-          <span className="text-[10px] text-[#999]">por línea de negocio</span>
+      {/* Header */}
+      <div className="flex items-center justify-between mb-4">
+        <div>
+          <h1 className="text-lg font-bold text-gray-900">Prima Neta Cobrada</h1>
+          <p className="text-xs text-gray-500">Por línea de negocio</p>
         </div>
         <div className="flex items-center gap-2">
-          <select value={year} onChange={e => setYear(e.target.value)} className="border border-[#E5E7EB] rounded px-2 py-1 bg-white text-[11px] font-medium">
+          <select value={year} onChange={e => setYear(e.target.value)} className="border border-gray-300 rounded-lg px-3 py-1.5 text-sm bg-white">
             <option>2026</option><option>2025</option>
           </select>
-          <select value={month} onChange={e => setMonth(e.target.value)} className="border border-[#E5E7EB] rounded px-2 py-1 bg-white text-[11px] font-medium">
-            {Object.keys(MESES).map(m => <option key={m}>{m}</option>)}
+          <select value={month} onChange={e => setMonth(e.target.value)} className="border border-gray-300 rounded-lg px-3 py-1.5 text-sm bg-white">
+            {MESES.map(m => <option key={m}>{m}</option>)}
           </select>
-          <span className="text-[10px] text-[#BBB]">Datos al: {lastDataDate ?? (mounted ? new Date().toLocaleDateString("es-MX") : "—")}</span>
-          {staleHours !== null && staleHours > 6 && <span className="text-[9px] bg-orange-100 text-orange-700 px-2 py-0.5 rounded-full font-medium">⚠ Desactualizado</span>}
+          {lastDataDate && <span className="text-xs text-gray-400 ml-2">Datos al: {lastDataDate}</span>}
         </div>
       </div>
 
-      {/* ═══ MAIN LAYOUT: Gauge (40%) + Table (60%) ═══ */}
-      <div className="flex gap-3 flex-shrink-0" style={{ height: "42%" }}>
-        {/* GAUGE — Larger and more prominent */}
-        <div className="bg-white rounded-xl shadow-[0_4px_20px_rgba(0,0,0,0.08)] border border-[#E5E5E5] flex items-center justify-center p-4 overflow-hidden" style={{ width: "40%", minWidth: 320 }}>
+      {/* Main Grid */}
+      <div className="grid grid-cols-12 gap-4">
+        
+        {/* LEFT: Gauge */}
+        <div className="col-span-4 bg-white rounded-xl shadow-sm border border-gray-200 p-4">
           <Gauge value={Math.round(gV * 10) / 10} prevYear={Math.round(gP * 10) / 10} budget={Math.round(gB * 10) / 10} />
         </div>
 
-        {/* TABLE — Static, click goes to Tabla Detalle */}
-        <div className="flex-1 bg-white rounded-xl shadow-[0_4px_20px_rgba(0,0,0,0.08)] border border-[#E5E5E5] overflow-hidden flex flex-col">
-          <div className="flex-1 overflow-y-auto">
-            <table className="w-full text-[12px]">
-              <thead className="sticky top-0 z-10">
-                <tr className="bg-[#041224] text-white border-b-2 border-b-[#E62800]">
-                  <th className="text-left px-4 py-3 font-bold text-[12px]">Línea de Negocio</th>
-                  <th className="text-right px-4 py-3 font-bold text-[12px]">Prima Neta</th>
-                  <th className="text-right px-4 py-3 font-bold text-[12px]">Año Anterior</th>
-                  <th className="text-right px-4 py-3 font-bold text-[12px]">Presupuesto</th>
+        {/* RIGHT: Table */}
+        <div className="col-span-8 bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="bg-gray-900 text-white">
+                <th className="text-left px-4 py-3 font-semibold">Línea</th>
+                <th className="text-right px-4 py-3 font-semibold">Prima Neta</th>
+                <th className="text-right px-4 py-3 font-semibold">Año Anterior</th>
+                <th className="text-right px-4 py-3 font-semibold">Presupuesto</th>
+              </tr>
+            </thead>
+            <tbody>
+              {lineas.map((l, i) => (
+                <tr key={l.nombre} className={`border-b border-gray-100 ${i % 2 ? 'bg-gray-50' : 'bg-white'} hover:bg-orange-50 transition-colors`}>
+                  <td className="px-4 py-2.5 font-medium text-gray-900">{l.nombre}</td>
+                  <td className="px-4 py-2.5 text-right font-semibold text-gray-900">{fmt(l.primaNeta)}</td>
+                  <td className="px-4 py-2.5 text-right text-gray-600">{fmt(l.anioAnterior)}</td>
+                  <td className="px-4 py-2.5 text-right text-gray-600">{fmt(l.presupuesto)}</td>
                 </tr>
-              </thead>
-              <tbody>
-                {lineas.map((l, idx) => (
-                  <tr key={l.nombre} className={`border-b border-[#F0F0F0] hover:bg-[#FFF5F5] transition-all cursor-default ${idx % 2 ? "bg-[#FAFAFA]" : "bg-white"}`}>
-                    <td className="px-4 py-3 font-semibold text-[#111]">{l.nombre}</td>
-                    <td className="px-4 py-3 text-right font-bold text-[#041224]">{fmt(l.primaNeta)}</td>
-                    <td className="px-4 py-3 text-right text-[#666]">{l.anioAnterior ? fmt(l.anioAnterior) : <span className="text-[#DDD]">—</span>}</td>
-                    <td className="px-4 py-3 text-right text-[#666]">{l.presupuesto ? fmt(l.presupuesto) : <span className="text-[#DDD]">—</span>}</td>
-                  </tr>
-                ))}
-                <tr className="bg-[#041224] text-white sticky bottom-0">
-                  <td className="px-4 py-3 font-bold">Total</td>
-                  <td className="px-4 py-3 text-right font-bold">{fmt(total)}</td>
-                  <td className="px-4 py-3 text-right font-bold">{hasAA ? fmt(totalAA) : ""}</td>
-                  <td className="px-4 py-3 text-right font-bold">{hasPpto ? fmt(totalPpto) : ""}</td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-          {/* Link to Tabla Detalle */}
-          <Link href="/tabla-detalle" className="block bg-[#FDECEA] text-center py-2 text-[11px] font-bold text-[#E62800] hover:bg-[#FEE2E2] transition-colors border-t border-[#F0F0F0]">
+              ))}
+              <tr className="bg-gray-900 text-white">
+                <td className="px-4 py-2.5 font-bold">Total</td>
+                <td className="px-4 py-2.5 text-right font-bold">{fmt(total)}</td>
+                <td className="px-4 py-2.5 text-right font-bold">{fmt(totalAA)}</td>
+                <td className="px-4 py-2.5 text-right font-bold">{fmt(totalPpto)}</td>
+              </tr>
+            </tbody>
+          </table>
+          <Link href="/tabla-detalle" className="block bg-gray-100 text-center py-2 text-xs font-semibold text-gray-700 hover:bg-gray-200 transition-colors">
             Ver detalle completo →
           </Link>
         </div>
-      </div>
 
-      {/* ═══ KPI CARDS ROW ═══ */}
-      <div className="grid grid-cols-4 gap-3 my-3 flex-shrink-0">
-        {/* Cumplimiento */}
-        <div className="bg-white rounded-xl shadow-[0_2px_12px_rgba(0,0,0,0.06)] border border-[#E5E5E5] p-4 flex items-center gap-4">
-          <svg viewBox="0 0 64 64" className="w-16 h-16 flex-shrink-0">
-            <circle cx="32" cy="32" r="26" fill="none" stroke="#F0F0F0" strokeWidth="8" />
-            <circle cx="32" cy="32" r="26" fill="none"
-              stroke={cumpl >= 90 ? "#16A34A" : cumpl >= 70 ? "#EAB308" : "#DC2626"}
-              strokeWidth="8" strokeLinecap="round"
-              strokeDasharray={`${(cumpl / 100) * 163.36} 163.36`}
-              transform="rotate(-90 32 32)" />
-            <text x="32" y="35" fontSize="18" fill="#041224" textAnchor="middle" fontWeight="900" fontFamily="Lato">{cumpl}%</text>
-          </svg>
-          <div>
-            <div className="text-[11px] font-bold text-[#041224]">Cumplimiento</div>
-            <div className="text-[9px] text-[#888]">del presupuesto</div>
-            <div className={`text-[10px] font-bold mt-1 ${cumpl >= 90 ? "text-[#16A34A]" : cumpl >= 70 ? "text-[#CA8A04]" : "text-[#DC2626]"}`}>
-              {cumpl >= 90 ? "Meta alcanzada ✓" : cumpl >= 70 ? "Cerca de meta" : "Por debajo de meta"}
+        {/* KPI Row */}
+        <div className="col-span-3 bg-white rounded-xl shadow-sm border border-gray-200 p-4">
+          <div className="flex items-center gap-3">
+            <svg viewBox="0 0 36 36" className="w-14 h-14">
+              <circle cx="18" cy="18" r="15" fill="none" stroke="#E5E7EB" strokeWidth="4" />
+              <circle cx="18" cy="18" r="15" fill="none"
+                stroke={cumpl >= 90 ? "#10B981" : cumpl >= 70 ? "#F59E0B" : "#EF4444"}
+                strokeWidth="4" strokeLinecap="round"
+                strokeDasharray={`${(cumpl / 100) * 94.2} 94.2`}
+                transform="rotate(-90 18 18)" />
+              <text x="18" y="20" fontSize="10" fill="#111" textAnchor="middle" fontWeight="700">{cumpl}%</text>
+            </svg>
+            <div>
+              <div className="text-xs font-semibold text-gray-900">Cumplimiento</div>
+              <div className="text-[10px] text-gray-500">del presupuesto</div>
+              <div className={`text-[11px] font-bold mt-0.5 ${cumpl >= 90 ? "text-emerald-600" : cumpl >= 70 ? "text-amber-600" : "text-red-600"}`}>
+                {cumpl >= 90 ? "✓ Meta alcanzada" : cumpl >= 70 ? "Cerca de meta" : "Por debajo"}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="col-span-3 bg-white rounded-xl shadow-sm border border-gray-200 p-4">
+          <div className="flex items-center gap-3">
+            <div className={`w-12 h-12 rounded-full flex items-center justify-center ${crec >= 0 ? "bg-emerald-100" : "bg-red-100"}`}>
+              <span className={`text-xl font-bold ${crec >= 0 ? "text-emerald-600" : "text-red-600"}`}>{crec >= 0 ? "↑" : "↓"}</span>
+            </div>
+            <div>
+              <div className={`text-2xl font-black ${crec >= 0 ? "text-emerald-600" : "text-red-600"}`}>{crec >= 0 ? "+" : ""}{crec}%</div>
+              <div className="text-[10px] text-gray-500">vs Año Anterior</div>
             </div>
           </div>
         </div>
 
-        {/* Crecimiento */}
-        <div className="bg-white rounded-xl shadow-[0_2px_12px_rgba(0,0,0,0.06)] border border-[#E5E5E5] p-4 flex items-center gap-4">
-          <div className={`w-14 h-14 rounded-xl flex items-center justify-center flex-shrink-0 ${crec >= 0 ? "bg-[#F0FDF4]" : "bg-[#FEF2F2]"}`}>
-            <span className={`text-2xl font-black ${crec >= 0 ? "text-[#16A34A]" : "text-[#DC2626]"}`}>{crec >= 0 ? "↑" : "↓"}</span>
+        <div className="col-span-3 bg-gray-900 rounded-xl shadow-sm p-4 text-white">
+          <div className="text-[10px] text-gray-400 uppercase font-semibold tracking-wide mb-2">Tipo de Cambio</div>
+          <div className="flex justify-between items-center mb-2">
+            <span className="text-xs text-gray-400">USD</span>
+            <span className="text-lg font-bold">${fx.usd.toFixed(2)}</span>
           </div>
-          <div>
-            <div className={`text-3xl font-black leading-none ${crec >= 0 ? "text-[#16A34A]" : "text-[#DC2626]"}`}>{crec >= 0 ? "+" : ""}{crec}%</div>
-            <div className="text-[10px] text-[#888] font-medium mt-1">vs Año Anterior</div>
+          <div className="flex justify-between items-center">
+            <span className="text-xs text-gray-400">DOP</span>
+            <span className="text-lg font-bold">${fx.dop.toFixed(2)}</span>
           </div>
         </div>
 
-        {/* Tipo de cambio */}
-        <div className="bg-[#041224] rounded-xl shadow-[0_2px_12px_rgba(0,0,0,0.2)] p-4 text-white">
-          <div className="text-[9px] text-white/50 uppercase font-bold tracking-wider mb-2">Tipo de Cambio</div>
-          {fxLoading ? <div className="text-sm text-white/30 animate-pulse">Actualizando…</div> : (
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <span className="text-[10px] font-medium text-white/60">Dólar USD</span>
-                <span className="text-xl font-black">${fx.usd.toFixed(2)}</span>
-              </div>
-              <div className="h-px bg-white/10" />
-              <div className="flex items-center justify-between">
-                <span className="text-[10px] font-medium text-white/60">Peso Dominicano</span>
-                <span className="text-xl font-black">${fx.dop.toFixed(2)}</span>
-              </div>
-            </div>
-          )}
-          {fx.fechaActualizacion && <div className="text-[8px] text-white/30 mt-2 text-right">{new Date(fx.fechaActualizacion).toLocaleString("es-MX", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })}</div>}
-        </div>
-
-        {/* Proyección */}
-        <div className={`rounded-xl shadow-[0_2px_12px_rgba(0,0,0,0.06)] border p-4 ${forecast >= totalPpto ? "bg-[#F0FDF4] border-[#16A34A]/30" : "bg-[#FEF2F2] border-[#DC2626]/30"}`}>
-          <div className="text-[9px] text-[#888] uppercase font-bold tracking-wider">Proyección al cierre</div>
-          <div className={`text-4xl font-black leading-none mt-1 ${forecast >= totalPpto ? "text-[#16A34A]" : "text-[#DC2626]"}`}>
+        <div className={`col-span-3 rounded-xl shadow-sm border p-4 ${forecast >= totalPpto ? "bg-emerald-50 border-emerald-200" : "bg-red-50 border-red-200"}`}>
+          <div className="text-[10px] text-gray-500 uppercase font-semibold tracking-wide">Proyección</div>
+          <div className={`text-3xl font-black mt-1 ${forecast >= totalPpto ? "text-emerald-600" : "text-red-600"}`}>
             ${(forecast / 1e6).toFixed(1)}M
           </div>
-          <div className="flex items-center gap-2 mt-2">
-            <div className="flex-1 h-2 bg-[#E5E7E9] rounded-full overflow-hidden">
-              <div className={`h-full rounded-full transition-all ${forecast >= totalPpto ? "bg-[#16A34A]" : "bg-[#DC2626]"}`} style={{ width: `${Math.min(100, (dp / dim) * 100)}%` }} />
-            </div>
-            <span className="text-[9px] text-[#888] font-medium">{dp}/{dim} días</span>
-          </div>
+          <div className="text-[10px] text-gray-500 mt-1">Estimado al cierre</div>
         </div>
-      </div>
 
-      {/* ═══ CHART — BIGGER AND MORE PROMINENT ═══ */}
-      <div className="bg-white rounded-xl shadow-[0_4px_20px_rgba(0,0,0,0.08)] border border-[#E5E5E5] px-5 py-4 flex-1 min-h-0 flex flex-col overflow-hidden">
-        <div className="flex items-center gap-4 mb-3 flex-shrink-0">
-          <span className="text-sm font-bold text-[#041224]">Prima neta por línea</span>
-          <div className="flex items-center gap-3 ml-auto">
-            <div className="flex items-center gap-1.5">
-              <div className="w-4 h-4 bg-[#041224] rounded" /><span className="text-[11px] text-[#666] font-medium">Prima cobrada</span>
+        {/* Chart */}
+        <div className="col-span-12 bg-white rounded-xl shadow-sm border border-gray-200 p-4">
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="text-sm font-bold text-gray-900">Prima Neta por Línea</h3>
+            <div className="flex items-center gap-2">
+              <span className="w-3 h-3 bg-gray-900 rounded-sm"></span>
+              <span className="text-xs text-gray-600">Millones MXN</span>
             </div>
-            {chartData.some(d => d.ppto > 0) && (
-              <div className="flex items-center gap-1.5">
-                <div className="w-4 h-4 bg-[#CCD1D3] rounded" /><span className="text-[11px] text-[#666] font-medium">Presupuesto</span>
-              </div>
+          </div>
+          <div ref={chartRef} style={{ height: 200 }}>
+            {chartReady && (
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart layout="vertical" data={chartData} margin={{ top: 5, right: 80, left: 10, bottom: 5 }} barSize={28}>
+                  <XAxis type="number" hide />
+                  <YAxis type="category" dataKey="nombre" width={130} tick={{ fontSize: 12, fill: '#374151' }} axisLine={false} tickLine={false} />
+                  <Bar dataKey="value" fill="#1F2937" radius={[0, 4, 4, 0]}>
+                    <LabelList dataKey="value" position="right" formatter={(v: unknown) => `$${v}M`} style={{ fontSize: 12, fontWeight: 600, fill: '#374151' }} />
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
             )}
           </div>
-        </div>
-        <div ref={chartRef} className="flex-1" style={{ minHeight: 220, height: 220 }}>
-          {chartReady && chartData.length > 0 && (
-            <ResponsiveContainer width="100%" height={220}>
-              <BarChart layout="vertical" data={chartData} margin={{ top: 10, right: 100, left: 20, bottom: 10 }} barGap={8} barSize={32}>
-                <CartesianGrid horizontal vertical={false} stroke="#F0F0F0" />
-                <XAxis type="number" domain={[0, "auto"]} tickFormatter={(v: unknown) => `$${v}M`} fontSize={12} tick={{ fill: "#888" }} axisLine={false} tickLine={false} />
-                <YAxis type="category" dataKey="nombre" width={150} fontSize={13} tick={{ fill: "#111", fontWeight: 700 }} axisLine={false} tickLine={false} />
-                <Bar dataKey="pn" fill="#041224" radius={[0, 8, 8, 0]}>
-                  <LabelList dataKey="pn" position="right" formatter={(v: unknown) => `$${v}M`} fontSize={13} fill="#041224" fontWeight={800} offset={12} />
-                </Bar>
-                {chartData.some(d => d.ppto > 0) && (
-                  <Bar dataKey="ppto" fill="#CCD1D3" radius={[0, 8, 8, 0]}>
-                    <LabelList dataKey="ppto" position="right" formatter={(v: unknown) => Number(v) > 0 ? `$${v}M` : ""} fontSize={11} fill="#888" offset={12} />
-                  </Bar>
-                )}
-              </BarChart>
-            </ResponsiveContainer>
-          )}
         </div>
       </div>
 
@@ -251,4 +199,3 @@ export default function HomePage() {
     </div>
   )
 }
-// Force rebuild 1772384912

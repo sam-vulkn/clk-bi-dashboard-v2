@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { Menu, X } from "lucide-react"
+import { Menu, X, LayoutDashboard, Table2, TrendingUp, Building2, Globe, FileText } from "lucide-react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 
@@ -12,93 +12,110 @@ export function Sidebar() {
   if (pathname === "/login") return null
 
   const isActive = (href: string) => pathname === href
-  const isGrupoActive = isActive("/") || isActive("/tabla-detalle") || isActive("/compromisos") || isActive("/corporate") || isActive("/internacional")
+
+  const navItems = [
+    { href: "/", label: "Tacómetro", icon: LayoutDashboard },
+    { href: "/tabla-detalle", label: "Tabla Detalle", icon: Table2 },
+    { href: "/compromisos", label: "Compromisos", icon: TrendingUp },
+    { href: "/corporate", label: "Corporate", icon: Building2 },
+    { href: "/internacional", label: "Internacional", icon: Globe },
+    { href: "/convenios", label: "Convenios", icon: FileText },
+  ]
+
+  const cobranzaItems = [
+    { href: "/cobranza-dia", label: "Por día" },
+    { href: "/cobranza-pendiente", label: "Pendiente" },
+  ]
 
   return (
     <>
       <button
         onClick={() => setOpen(!open)}
-        className="fixed top-4 left-4 z-50 lg:hidden bg-[#041224] text-white p-2 rounded-md shadow-lg"
+        className="fixed top-3 left-3 z-50 lg:hidden bg-gray-900 text-white p-2 rounded-lg shadow-lg"
       >
         {open ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
       </button>
-      {open && <div className="fixed inset-0 bg-black/50 z-30 lg:hidden" onClick={() => setOpen(false)} />}
+      {open && <div className="fixed inset-0 bg-black/40 z-30 lg:hidden" onClick={() => setOpen(false)} />}
 
       <aside
-        className={`fixed top-0 left-0 h-full bg-[#F7F7F7] flex flex-col z-40 transition-transform lg:translate-x-0 ${open ? "translate-x-0" : "-translate-x-full"} border-r border-[#E5E7E9] shadow-[2px_0_10px_rgba(0,0,0,0.05)]`}
-        style={{ width: 170, minWidth: 170, maxWidth: 170 }}
+        className={`fixed top-0 left-0 h-full bg-gray-50 flex flex-col z-40 transition-transform lg:translate-x-0 ${open ? "translate-x-0" : "-translate-x-full"} border-r border-gray-200`}
+        style={{ width: 180 }}
       >
         {/* Logo */}
-        <div className="bg-white px-4 py-4 border-b border-[#E5E7E9] flex items-center justify-center shadow-[0_2px_4px_rgba(0,0,0,0.03)]">
-          <div className="text-[#E62800] font-black text-base tracking-tight">
-            Click<span className="text-[#041224]">SEGUROS</span>
+        <div className="bg-white px-4 py-4 border-b border-gray-200">
+          <div className="text-center">
+            <span className="text-lg font-black text-gray-900">Click</span>
+            <span className="text-lg font-black text-orange-600">SEGUROS</span>
           </div>
         </div>
 
-        {/* ═══ GRUPO CLICK BOX — Power BI style ═══ */}
-        <div className="mx-3 mt-4 bg-white rounded-lg border border-[#E5E7E9] shadow-[0_2px_8px_rgba(0,0,0,0.06)] overflow-hidden">
-          <div className={`px-3 py-2 border-b transition-colors ${isGrupoActive ? "bg-[#041224]" : "bg-[#041224]/90"}`}>
-            <span className="text-[11px] font-bold text-white uppercase tracking-wider">Grupo Click</span>
+        {/* Main Navigation */}
+        <div className="flex-1 py-3 px-2 space-y-1 overflow-y-auto">
+          <div className="px-2 py-1">
+            <span className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider">Dashboard</span>
           </div>
-          <div className="flex flex-col">
+          
+          {navItems.slice(0, 2).map(item => (
             <Link
-              href="/"
+              key={item.href}
+              href={item.href}
               onClick={() => setOpen(false)}
-              className={`text-center py-2.5 px-3 text-[11px] font-semibold no-underline transition-all border-b border-[#F0F0F0] ${
-                isActive("/") ? "bg-[#FDECEA] text-[#E62800]" : "text-[#041224] hover:bg-[#F5F5F5]"
+              className={`flex items-center gap-2 px-3 py-2 rounded-lg text-[12px] font-medium transition-all ${
+                isActive(item.href)
+                  ? "bg-gray-900 text-white shadow-sm"
+                  : "text-gray-700 hover:bg-gray-200"
               }`}
             >
-              Tacómetro
+              <item.icon className="w-4 h-4" />
+              {item.label}
             </Link>
-            <Link
-              href="/tabla-detalle"
-              onClick={() => setOpen(false)}
-              className={`text-center py-2.5 px-3 text-[11px] font-semibold no-underline transition-all ${
-                isActive("/tabla-detalle") ? "bg-[#FDECEA] text-[#E62800]" : "text-[#041224] hover:bg-[#F5F5F5]"
-              }`}
-            >
-              Tabla Detalle
-            </Link>
-          </div>
-        </div>
+          ))}
 
-        {/* ═══ COBRANZA BOX — Power BI style ═══ */}
-        <div className="mx-3 mt-3 bg-white rounded-lg border border-[#E5E7E9] shadow-[0_2px_8px_rgba(0,0,0,0.06)] overflow-hidden">
-          <div className="bg-[#FEE2E2] px-3 py-2 border-b border-[#E62800]/15">
-            <span className="text-[11px] font-bold text-[#E62800] uppercase tracking-wider">Cobranza</span>
+          <div className="px-2 py-2 mt-3">
+            <span className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider">Cobranza</span>
           </div>
-          <div className="flex flex-col">
+          
+          {cobranzaItems.map(item => (
             <Link
-              href="/cobranza-dia"
+              key={item.href}
+              href={item.href}
               onClick={() => setOpen(false)}
-              className={`text-center py-2.5 px-3 text-[11px] font-semibold no-underline transition-all border-b border-[#F0F0F0] ${
-                isActive("/cobranza-dia") ? "bg-[#FEE2E2] text-[#E62800]" : "text-[#041224] hover:bg-[#FEE2E2]/30"
+              className={`flex items-center gap-2 px-3 py-2 rounded-lg text-[12px] font-medium transition-all ${
+                isActive(item.href)
+                  ? "bg-orange-100 text-orange-700"
+                  : "text-gray-700 hover:bg-gray-200"
               }`}
             >
-              Cobranza por día
+              <TrendingUp className="w-4 h-4" />
+              {item.label}
             </Link>
-            <Link
-              href="/cobranza-pendiente"
-              onClick={() => setOpen(false)}
-              className={`text-center py-2.5 px-3 text-[11px] font-semibold no-underline transition-all ${
-                isActive("/cobranza-pendiente") ? "bg-[#FEE2E2] text-[#E62800]" : "text-[#041224] hover:bg-[#FEE2E2]/30"
-              }`}
-            >
-              Cobranza pendiente
-            </Link>
-          </div>
-        </div>
+          ))}
 
-        {/* Spacer */}
-        <div className="flex-1" />
+          <div className="px-2 py-2 mt-3">
+            <span className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider">Reportes</span>
+          </div>
+          
+          {navItems.slice(2).map(item => (
+            <Link
+              key={item.href}
+              href={item.href}
+              onClick={() => setOpen(false)}
+              className={`flex items-center gap-2 px-3 py-2 rounded-lg text-[12px] font-medium transition-all ${
+                isActive(item.href)
+                  ? "bg-gray-900 text-white shadow-sm"
+                  : "text-gray-700 hover:bg-gray-200"
+              }`}
+            >
+              <item.icon className="w-4 h-4" />
+              {item.label}
+            </Link>
+          ))}
+        </div>
 
         {/* Footer */}
-        <div className="px-3 pb-4">
-          <div className="bg-white rounded-lg border border-[#E5E7E9] p-2 text-center">
-            <div className="text-[9px] text-[#999] leading-tight">
-              CLK BI Dashboard<br />
-              <span className="text-[#041224] font-semibold">v2.0</span>
-            </div>
+        <div className="p-3 border-t border-gray-200 bg-white">
+          <div className="text-[10px] text-gray-400 text-center">
+            v2.0 • CLK BI
           </div>
         </div>
       </aside>
