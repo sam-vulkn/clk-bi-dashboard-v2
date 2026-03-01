@@ -33,8 +33,8 @@ export function Gauge({ value, prevYear = 88.9, budget = 129.5 }: GaugeProps) {
     return () => cancelAnimationFrame(raf.current)
   }, [pct])
 
-  const cx = 200, cy = 175
-  const ro = 145, ri = 105
+  const cx = 200, cy = 180
+  const ro = 155, ri = 115
   const startA = 150, sweepA = 240 // 240° arc
 
   const toXY = (deg: number, r: number) => {
@@ -56,24 +56,24 @@ export function Gauge({ value, prevYear = 88.9, budget = 129.5 }: GaugeProps) {
   // Needle
   const na = p2a(anim)
   const nRad = (na * Math.PI) / 180
-  const nLen = ro + 6
+  const nLen = ro + 8
   const tip = { x: cx + nLen * Math.cos(nRad), y: cy + nLen * Math.sin(nRad) }
   const pRad = nRad + Math.PI / 2
-  const bw = 3.5
+  const bw = 4
   const b1 = { x: cx + bw * Math.cos(pRad), y: cy + bw * Math.sin(pRad) }
   const b2 = { x: cx - bw * Math.cos(pRad), y: cy - bw * Math.sin(pRad) }
-  const tail = { x: cx - 15 * Math.cos(nRad), y: cy - 15 * Math.sin(nRad) }
+  const tail = { x: cx - 18 * Math.cos(nRad), y: cy - 18 * Math.sin(nRad) }
 
   // Tick marks with values
   const renderTick = (pctVal: number, label: string, color: string, showLine: boolean) => {
     const angle = p2a(pctVal)
-    const outer = toXY(angle, ro + 2)
-    const inner = toXY(angle, ri - 2)
-    const lblPos = toXY(angle, ro + 16)
+    const outer = toXY(angle, ro + 3)
+    const inner = toXY(angle, ri - 3)
+    const lblPos = toXY(angle, ro + 20)
     return (
       <g key={label}>
-        {showLine && <line x1={outer.x} y1={outer.y} x2={inner.x} y2={inner.y} stroke="white" strokeWidth="2.5" />}
-        <text x={lblPos.x} y={lblPos.y} fontSize="9" fill={color} textAnchor="middle" dominantBaseline="middle" fontWeight="800" fontFamily="Lato">
+        {showLine && <line x1={outer.x} y1={outer.y} x2={inner.x} y2={inner.y} stroke="white" strokeWidth="3" />}
+        <text x={lblPos.x} y={lblPos.y} fontSize="10" fill={color} textAnchor="middle" dominantBaseline="middle" fontWeight="800" fontFamily="Lato">
           {label}
         </text>
       </g>
@@ -84,9 +84,9 @@ export function Gauge({ value, prevYear = 88.9, budget = 129.5 }: GaugeProps) {
   const scaleTicks = [0, 0.25, 0.5, 0.75, 1].map(p => {
     const val = min + p * (max - min)
     const angle = p2a(p)
-    const pos = toXY(angle, ro + 10)
+    const pos = toXY(angle, ro + 14)
     return (
-      <text key={`sc-${p}`} x={pos.x} y={pos.y} fontSize="7" fill="#BBB" textAnchor="middle" dominantBaseline="middle">
+      <text key={`sc-${p}`} x={pos.x} y={pos.y} fontSize="9" fill="#AAA" textAnchor="middle" dominantBaseline="middle" fontWeight="600">
         ${Math.round(val)}M
       </text>
     )
@@ -96,26 +96,27 @@ export function Gauge({ value, prevYear = 88.9, budget = 129.5 }: GaugeProps) {
   const smallTicks = Array.from({ length: 21 }, (_, i) => i / 20).map(p => {
     const angle = p2a(p)
     const isMajor = p % 0.25 === 0
-    const outerR = ro + (isMajor ? 3 : 1)
-    const innerR = ro - (isMajor ? 5 : 2)
+    const outerR = ro + (isMajor ? 4 : 2)
+    const innerR = ro - (isMajor ? 6 : 3)
     const o = toXY(angle, outerR), i2 = toXY(angle, innerR)
-    return <line key={`t-${p}`} x1={o.x} y1={o.y} x2={i2.x} y2={i2.y} stroke={isMajor ? "#999" : "#CCC"} strokeWidth={isMajor ? 1.5 : 0.7} />
+    return <line key={`t-${p}`} x1={o.x} y1={o.y} x2={i2.x} y2={i2.y} stroke={isMajor ? "#888" : "#CCC"} strokeWidth={isMajor ? 2 : 1} />
   })
 
   return (
     <div className="w-full flex flex-col items-center">
-      <svg viewBox="25 10 350 220" className="w-full" preserveAspectRatio="xMidYMid meet">
+      <svg viewBox="0 0 400 260" className="w-full" preserveAspectRatio="xMidYMid meet">
         <defs>
-          <filter id="arcShadow"><feDropShadow dx="0" dy="3" stdDeviation="4" floodColor="#000" floodOpacity="0.1" /></filter>
+          <filter id="arcShadow"><feDropShadow dx="0" dy="4" stdDeviation="6" floodColor="#000" floodOpacity="0.12" /></filter>
           <linearGradient id="rg" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stopColor="#EF4444" /><stop offset="100%" stopColor="#B91C1C" /></linearGradient>
           <linearGradient id="yg" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stopColor="#FCD34D" /><stop offset="100%" stopColor="#D97706" /></linearGradient>
           <linearGradient id="gg" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stopColor="#34D399" /><stop offset="100%" stopColor="#059669" /></linearGradient>
-          <filter id="nSh"><feDropShadow dx="1" dy="2" stdDeviation="2" floodOpacity="0.25" /></filter>
-          <radialGradient id="pvt" cx="35%" cy="35%"><stop offset="0%" stopColor="#EEE" /><stop offset="60%" stopColor="#999" /><stop offset="100%" stopColor="#555" /></radialGradient>
+          <filter id="nSh"><feDropShadow dx="1" dy="3" stdDeviation="3" floodOpacity="0.3" /></filter>
+          <radialGradient id="pvt" cx="35%" cy="35%"><stop offset="0%" stopColor="#F5F5F5" /><stop offset="60%" stopColor="#AAA" /><stop offset="100%" stopColor="#666" /></radialGradient>
+          <filter id="textShadow"><feDropShadow dx="0" dy="1" stdDeviation="1" floodOpacity="0.15" /></filter>
         </defs>
 
         {/* Track background */}
-        <path d={descArc(startA, startA + sweepA, ro + 2, ri - 2)} fill="#E5E5E5" filter="url(#arcShadow)" />
+        <path d={descArc(startA, startA + sweepA, ro + 3, ri - 3)} fill="#E8E8E8" filter="url(#arcShadow)" />
 
         {/* 3 zones */}
         <path d={descArc(startA, z1e, ro, ri)} fill="url(#rg)" />
@@ -123,7 +124,7 @@ export function Gauge({ value, prevYear = 88.9, budget = 129.5 }: GaugeProps) {
         <path d={descArc(z2e, startA + sweepA, ro, ri)} fill="url(#gg)" />
 
         {/* Highlight strip */}
-        <path d={descArc(startA, startA + sweepA, ro, ro - 4)} fill="rgba(255,255,255,0.2)" />
+        <path d={descArc(startA, startA + sweepA, ro, ro - 5)} fill="rgba(255,255,255,0.25)" />
 
         {/* Small tick marks */}
         {smallTicks}
@@ -136,21 +137,23 @@ export function Gauge({ value, prevYear = 88.9, budget = 129.5 }: GaugeProps) {
         {renderTick(budPct, `$${budget}M`, "#059669", true)}
 
         {/* Needle */}
-        <line x1={tail.x} y1={tail.y} x2={tip.x} y2={tip.y} stroke="#1A1A1A" strokeWidth="2.5" strokeLinecap="round" filter="url(#nSh)" />
+        <line x1={tail.x} y1={tail.y} x2={tip.x} y2={tip.y} stroke="#1A1A1A" strokeWidth="3" strokeLinecap="round" filter="url(#nSh)" />
         <polygon points={`${tip.x},${tip.y} ${b1.x},${b1.y} ${b2.x},${b2.y}`} fill="#111" />
 
         {/* Pivot */}
-        <circle cx={cx} cy={cy} r={10} fill="url(#pvt)" stroke="#888" strokeWidth="0.5" />
-        <circle cx={cx} cy={cy} r={3} fill="#666" />
+        <circle cx={cx} cy={cy} r={12} fill="url(#pvt)" stroke="#777" strokeWidth="0.5" />
+        <circle cx={cx} cy={cy} r={4} fill="#555" />
 
-        {/* Center value — BOLD like Power BI */}
-        <text x={cx} y={cy - 25} fontSize="52" fill="#041224" textAnchor="middle" fontWeight="900" fontFamily="Lato" letterSpacing="-2">
+        {/* ═══ CENTER VALUE — BOLD & ELEGANT ═══ */}
+        <text x={cx} y={cy - 35} fontSize="60" fill="#041224" textAnchor="middle" fontWeight="900" fontFamily="Lato" letterSpacing="-3" filter="url(#textShadow)">
           ${value < 1000 ? value.toFixed(1) : Math.round(value)}M
         </text>
-        <text x={cx} y={cy + 5} fontSize="13" fill="#666" textAnchor="middle" fontFamily="Lato">
-          <tspan fill="#999">de </tspan>
-          <tspan fill="#041224" fontWeight="800" fontSize="15">${budget}M</tspan>
-          <tspan fill="#999"> presupuesto</tspan>
+        
+        {/* Elegant budget text with styling */}
+        <text x={cx} y={cy + 5} textAnchor="middle" fontFamily="Lato">
+          <tspan fontSize="13" fill="#888" fontWeight="400">de </tspan>
+          <tspan fontSize="18" fill="#041224" fontWeight="800">${budget}M</tspan>
+          <tspan fontSize="13" fill="#888" fontWeight="400"> presupuesto</tspan>
         </text>
       </svg>
     </div>

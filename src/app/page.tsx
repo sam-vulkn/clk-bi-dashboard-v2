@@ -1,13 +1,13 @@
 "use client"
 
 import React, { useState, useEffect, useCallback } from "react"
-import { ChevronRight, ChevronDown } from "lucide-react"
+import Link from "next/link"
 import { Gauge } from "@/components/gauge"
 import { PageTabs } from "@/components/page-tabs"
 import { PageFooter } from "@/components/page-footer"
 import {
   SEED_LINEAS, SEED_PRESUPUESTO, SEED_FX,
-  getLineasNegocio, getGerencias, getVendedores, getTipoCambio, getDataFreshness, getLastDataDate,
+  getTipoCambio, getDataFreshness, getLastDataDate,
 } from "@/lib/queries"
 import type { FxRates } from "@/lib/queries"
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, ResponsiveContainer, LabelList, Cell } from "recharts"
@@ -26,47 +26,17 @@ interface DL { nombre: string; primaNeta: number; presupuesto: number; anioAnter
 export default function HomePage() {
   const [year, setYear] = useState("2026")
   const [month, setMonth] = useState("Febrero")
-  const [lineas, setLineas] = useState<DL[]>(SEED_LINEAS.map(l => ({ nombre: l.nombre, primaNeta: l.primaNeta, presupuesto: l.presupuesto, anioAnterior: l.anioAnterior })))
+  const [lineas] = useState<DL[]>(SEED_LINEAS.map(l => ({ nombre: l.nombre, primaNeta: l.primaNeta, presupuesto: l.presupuesto, anioAnterior: l.anioAnterior })))
   const [fx, setFx] = useState<FxRates & { fechaActualizacion?: string }>(SEED_FX)
   const [fxLoading, setFxLoading] = useState(true)
-  const [loading, setLoading] = useState(true)
-  const [selected, setSelected] = useState<string | null>(null)
   const [staleHours, setStaleHours] = useState<number | null>(null)
   const [lastDataDate, setLastDataDate] = useState<string | null>(null)
-  const [expanded, setExpanded] = useState<Record<string, boolean>>({})
-  const [gerData, setGerData] = useState<Record<string, { gerencia: string; primaNeta: number }[]>>({})
-  const [expGer, setExpGer] = useState<Record<string, boolean>>({})
-  const [vendData, setVendData] = useState<Record<string, { vendedor: string; primaNeta: number }[]>>({})
   const [mounted, setMounted] = useState(false)
 
-  const periodo = MESES[month] ?? 2
   useEffect(() => { setMounted(true); document.title = "Tacómetro | CLK BI Dashboard" }, [])
-
-  const fetchData = useCallback(async () => {
-    setLoading(true)
-    // Home page: use SEED data (Power BI reference values) as baseline
-    // Real Supabase data is incomplete (only ~10K of ~50K+ transactions loaded)
-    // Drill-down pages use real Supabase data for detail views
-    setLineas(SEED_LINEAS.map(l => ({ nombre: l.nombre, primaNeta: l.primaNeta, presupuesto: l.presupuesto, anioAnterior: l.anioAnterior })))
-    setLoading(false)
-    setExpanded({}); setGerData({}); setExpGer({}); setVendData({}); setSelected(null)
-  }, [periodo, year])
-
-  useEffect(() => { fetchData() }, [fetchData])
   useEffect(() => { getTipoCambio().then(r => { if (r) setFx(r); setFxLoading(false) }).catch(() => setFxLoading(false)) }, [])
   useEffect(() => { getDataFreshness().then(h => setStaleHours(h)) }, [])
   useEffect(() => { getLastDataDate().then(d => setLastDataDate(d)) }, [])
-  useEffect(() => { const t = setTimeout(() => { if (loading) { setLineas(SEED_LINEAS.map(l => ({ nombre: l.nombre, primaNeta: l.primaNeta, presupuesto: l.presupuesto, anioAnterior: l.anioAnterior }))); setLoading(false) } }, 3000); return () => clearTimeout(t) }, [loading])
-
-  const toggleLinea = async (linea: string) => {
-    if (!expanded[linea] && !gerData[linea]) { const d = await getGerencias(linea, periodo, year); setGerData(p => ({ ...p, [linea]: d ?? [] })) }
-    setExpanded(p => ({ ...p, [linea]: !p[linea] }))
-  }
-  const toggleGer = async (linea: string, ger: string) => {
-    const k = `${linea}::${ger}`
-    if (!expGer[k] && !vendData[k]) { const d = await getVendedores(ger, linea, periodo, year); setVendData(p => ({ ...p, [k]: d ?? [] })) }
-    setExpGer(p => ({ ...p, [k]: !p[k] }))
-  }
 
   const total = lineas.reduce((s, l) => s + l.primaNeta, 0)
   const totalPpto = lineas.reduce((s, l) => s + l.presupuesto, 0) || SEED_PRESUPUESTO
@@ -74,28 +44,24 @@ export default function HomePage() {
   const hasPpto = lineas.some(l => l.presupuesto > 0)
   const hasAA = lineas.some(l => l.anioAnterior > 0)
 
-  // KPIs — use real calc if data available, otherwise known Power BI values
+  // KPIs
   const cumpl = hasPpto ? Math.round((total / totalPpto) * 100) : 76
   const crec = hasAA ? Math.round(((total - totalAA) / totalAA) * 1000) / 10 : 10.8
 
   const now = mounted ? new Date() : new Date(2026, 1, 28)
   const dim = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate()
   const dp = now.getDate()
-  // Projection: When using seed data (Power BI reference), total is already the month's cumulative
-  // Only apply day-projection if we have real partial-month data
-  // Seed total is ~98.5M for Feb, so forecast should be similar magnitude
-  const isUsingSeedData = !hasPpto || lineas.every((l, i) => l.primaNeta === SEED_LINEAS[i]?.primaNeta)
-  const forecast = isUsingSeedData 
-    ? total * 1.05 // Seed data: project +5% growth (realistic)
-    : (dp > 0 ? (total / dp) * dim : total) // Real data: linear projection
+  const forecast = total * 1.05 // Seed data: project +5% (realistic)
 
-  // Gauge uses SEED values if no real presupuesto/AA
-  const gV = (selected ? (lineas.find(l => l.nombre === selected)?.primaNeta ?? total) : total) / 1e6 || 98.5
+  // Gauge values
+  const gV = total / 1e6 || 98.5
   const gB = hasPpto ? totalPpto / 1e6 : 129.5
   const gP = hasAA ? totalAA / 1e6 : 88.9
 
-  const chartData = [...lineas].reverse().map(l => ({
-    nombre: l.nombre, pn: +(l.primaNeta / 1e6).toFixed(1),
+  // Chart data - sorted by prima descending for visual impact
+  const chartData = [...lineas].sort((a, b) => a.primaNeta - b.primaNeta).map(l => ({
+    nombre: l.nombre,
+    pn: +(l.primaNeta / 1e6).toFixed(1),
     ppto: l.presupuesto ? +(l.presupuesto / 1e6).toFixed(1) : 0,
   }))
 
@@ -104,172 +70,162 @@ export default function HomePage() {
       <PageTabs />
 
       {/* Title bar */}
-      <div className="flex items-center justify-between mb-1 flex-shrink-0">
+      <div className="flex items-center justify-between mb-2 flex-shrink-0">
         <div className="flex items-baseline gap-2">
-          <span className="text-[11px] font-semibold text-[#041224] tracking-wide uppercase">Prima neta cobrada</span>
-          <span className="text-[10px] text-[#BBB]">por línea de negocio</span>
+          <span className="text-xs font-bold text-[#041224] tracking-wide uppercase">Prima neta cobrada</span>
+          <span className="text-[10px] text-[#999]">por línea de negocio</span>
         </div>
-        <div className="flex items-center gap-1.5">
-          <select value={year} onChange={e => setYear(e.target.value)} className="border border-[#E5E7EB] rounded px-1.5 py-0.5 bg-white text-[10px]"><option>2026</option><option>2025</option></select>
-          <select value={month} onChange={e => setMonth(e.target.value)} className="border border-[#E5E7EB] rounded px-1.5 py-0.5 bg-white text-[10px]">{Object.keys(MESES).map(m => <option key={m}>{m}</option>)}</select>
-          <span className="text-[9px] text-[#CCC]">Datos al: {lastDataDate ?? (mounted ? new Date().toLocaleDateString("es-MX") : "—")}</span>
-          {staleHours !== null && staleHours > 6 && <span className="text-[8px] bg-orange-100 text-orange-700 px-1.5 py-0.5 rounded-full">⚠ Desactualizado</span>}
+        <div className="flex items-center gap-2">
+          <select value={year} onChange={e => setYear(e.target.value)} className="border border-[#E5E7EB] rounded px-2 py-1 bg-white text-[11px] font-medium">
+            <option>2026</option><option>2025</option>
+          </select>
+          <select value={month} onChange={e => setMonth(e.target.value)} className="border border-[#E5E7EB] rounded px-2 py-1 bg-white text-[11px] font-medium">
+            {Object.keys(MESES).map(m => <option key={m}>{m}</option>)}
+          </select>
+          <span className="text-[10px] text-[#BBB]">Datos al: {lastDataDate ?? (mounted ? new Date().toLocaleDateString("es-MX") : "—")}</span>
+          {staleHours !== null && staleHours > 6 && <span className="text-[9px] bg-orange-100 text-orange-700 px-2 py-0.5 rounded-full font-medium">⚠ Desactualizado</span>}
         </div>
       </div>
 
-      {/* ═══ ROW 1: Gauge 30% + Table 70% — compact height ═══ */}
-      <div className="flex gap-2 flex-shrink-0" style={{ height: "35%" }}>
-        {/* Gauge */}
-        <div className="bg-white rounded-lg shadow-[0_2px_12px_rgba(0,0,0,0.06)] border border-[#EAEAEA] flex items-center justify-center p-2 overflow-hidden" style={{ width: "35%", minWidth: 280 }}>
+      {/* ═══ MAIN LAYOUT: Gauge (40%) + Table (60%) ═══ */}
+      <div className="flex gap-3 flex-shrink-0" style={{ height: "42%" }}>
+        {/* GAUGE — Larger and more prominent */}
+        <div className="bg-white rounded-xl shadow-[0_4px_20px_rgba(0,0,0,0.08)] border border-[#E5E5E5] flex items-center justify-center p-4 overflow-hidden" style={{ width: "40%", minWidth: 320 }}>
           <Gauge value={Math.round(gV * 10) / 10} prevYear={Math.round(gP * 10) / 10} budget={Math.round(gB * 10) / 10} />
         </div>
 
-        {/* Table */}
-        <div className="flex-1 bg-white rounded-lg shadow-[0_2px_12px_rgba(0,0,0,0.06)] border border-[#EAEAEA] overflow-hidden flex flex-col">
+        {/* TABLE — Static, click goes to Tabla Detalle */}
+        <div className="flex-1 bg-white rounded-xl shadow-[0_4px_20px_rgba(0,0,0,0.08)] border border-[#E5E5E5] overflow-hidden flex flex-col">
           <div className="flex-1 overflow-y-auto">
-            <table className="w-full text-[11px]">
+            <table className="w-full text-[12px]">
               <thead className="sticky top-0 z-10">
                 <tr className="bg-[#041224] text-white border-b-2 border-b-[#E62800]">
-                  <th className="w-7 px-1 py-2.5"></th>
-                  <th className="text-left px-3 py-2.5 font-semibold text-[11px]">Línea</th>
-                  <th className="text-right px-3 py-2.5 font-semibold text-[11px]">Prima Neta</th>
-                  <th className="text-right px-3 py-2.5 font-semibold text-[11px]">Año Anterior *</th>
-                  <th className="text-right px-3 py-2.5 font-semibold text-[11px]">Presupuesto</th>
-                  <th className="text-right px-3 py-2.5 font-semibold text-[11px]">Mínimo</th>
+                  <th className="text-left px-4 py-3 font-bold text-[12px]">Línea de Negocio</th>
+                  <th className="text-right px-4 py-3 font-bold text-[12px]">Prima Neta</th>
+                  <th className="text-right px-4 py-3 font-bold text-[12px]">Año Anterior</th>
+                  <th className="text-right px-4 py-3 font-bold text-[12px]">Presupuesto</th>
                 </tr>
               </thead>
               <tbody>
-                {loading ? (
-                  <tr><td colSpan={6} className="py-10 text-center text-[#CCC]">Cargando...</td></tr>
-                ) : lineas.map((l, idx) => (
-                  <tr key={l.nombre} className={`border-b border-[#F0F0F0] hover:bg-[#FFF5F5] transition-colors ${selected === l.nombre ? "bg-[#FFF5F5] border-l-[3px] border-l-[#E62800]" : idx % 2 ? "bg-[#FAFAFA]" : ""}`}>
-                    <td className="px-1 py-2.5">
-                      <ChevronRight className="w-4 h-4 text-[#CCC]" />
-                    </td>
-                    <td className="px-3 py-2.5 font-semibold text-[#111]">{l.nombre}</td>
-                    <td className="px-3 py-2.5 text-right font-bold text-[#111]">{fmt(l.primaNeta)}</td>
-                    <td className="px-3 py-2.5 text-right text-[#666]">{l.anioAnterior ? fmt(l.anioAnterior) : <span className="text-[#DDD]">—</span>}</td>
-                    <td className="px-3 py-2.5 text-right text-[#666]">{l.presupuesto ? fmt(l.presupuesto) : <span className="text-[#DDD]">—</span>}</td>
-                    <td className="px-3 py-2.5 text-right text-[#DDD]">—</td>
+                {lineas.map((l, idx) => (
+                  <tr key={l.nombre} className={`border-b border-[#F0F0F0] hover:bg-[#FFF5F5] transition-all cursor-default ${idx % 2 ? "bg-[#FAFAFA]" : "bg-white"}`}>
+                    <td className="px-4 py-3 font-semibold text-[#111]">{l.nombre}</td>
+                    <td className="px-4 py-3 text-right font-bold text-[#041224]">{fmt(l.primaNeta)}</td>
+                    <td className="px-4 py-3 text-right text-[#666]">{l.anioAnterior ? fmt(l.anioAnterior) : <span className="text-[#DDD]">—</span>}</td>
+                    <td className="px-4 py-3 text-right text-[#666]">{l.presupuesto ? fmt(l.presupuesto) : <span className="text-[#DDD]">—</span>}</td>
                   </tr>
                 ))}
-                {!loading && (
-                  <tr className="bg-[#041224] text-white sticky bottom-0">
-                    <td className="py-2.5"></td>
-                    <td className="px-3 py-2.5 font-bold">Total</td>
-                    <td className="px-3 py-2.5 text-right font-bold">{fmt(total)}</td>
-                    <td className="px-3 py-2.5 text-right font-bold">{hasAA ? fmt(totalAA) : ""}</td>
-                    <td className="px-3 py-2.5 text-right font-bold">{hasPpto ? fmt(totalPpto) : ""}</td>
-                    <td className="px-3 py-2.5"></td>
-                  </tr>
-                )}
+                <tr className="bg-[#041224] text-white sticky bottom-0">
+                  <td className="px-4 py-3 font-bold">Total</td>
+                  <td className="px-4 py-3 text-right font-bold">{fmt(total)}</td>
+                  <td className="px-4 py-3 text-right font-bold">{hasAA ? fmt(totalAA) : ""}</td>
+                  <td className="px-4 py-3 text-right font-bold">{hasPpto ? fmt(totalPpto) : ""}</td>
+                </tr>
               </tbody>
             </table>
           </div>
+          {/* Link to Tabla Detalle */}
+          <Link href="/tabla-detalle" className="block bg-[#FDECEA] text-center py-2 text-[11px] font-bold text-[#E62800] hover:bg-[#FEE2E2] transition-colors border-t border-[#F0F0F0]">
+            Ver detalle completo →
+          </Link>
         </div>
       </div>
 
-      {/* ═══ ROW 2: 4 KPI cards — tight spacing ═══ */}
-      <div className="grid grid-cols-4 gap-2 my-2 flex-shrink-0">
+      {/* ═══ KPI CARDS ROW ═══ */}
+      <div className="grid grid-cols-4 gap-3 my-3 flex-shrink-0">
         {/* Cumplimiento */}
-        <div className="bg-white rounded-lg shadow-[0_1px_6px_rgba(0,0,0,0.06)] border border-[#EAEAEA] p-3 flex items-center gap-3">
-          <svg viewBox="0 0 64 64" className="w-14 h-14 flex-shrink-0">
-            <circle cx="32" cy="32" r="26" fill="none" stroke="#F0F0F0" strokeWidth="7" />
+        <div className="bg-white rounded-xl shadow-[0_2px_12px_rgba(0,0,0,0.06)] border border-[#E5E5E5] p-4 flex items-center gap-4">
+          <svg viewBox="0 0 64 64" className="w-16 h-16 flex-shrink-0">
+            <circle cx="32" cy="32" r="26" fill="none" stroke="#F0F0F0" strokeWidth="8" />
             <circle cx="32" cy="32" r="26" fill="none"
               stroke={cumpl >= 90 ? "#16A34A" : cumpl >= 70 ? "#EAB308" : "#DC2626"}
-              strokeWidth="7" strokeLinecap="round"
+              strokeWidth="8" strokeLinecap="round"
               strokeDasharray={`${(cumpl / 100) * 163.36} 163.36`}
               transform="rotate(-90 32 32)" />
-            <text x="32" y="34" fontSize="16" fill="#041224" textAnchor="middle" fontWeight="900" fontFamily="Lato">{cumpl}%</text>
+            <text x="32" y="35" fontSize="18" fill="#041224" textAnchor="middle" fontWeight="900" fontFamily="Lato">{cumpl}%</text>
           </svg>
           <div>
-            <div className="text-[10px] font-bold text-[#041224]">Cumplimiento</div>
-            <div className="text-[8px] text-[#999]">del presupuesto</div>
-            <div className={`text-[9px] font-bold mt-0.5 ${cumpl >= 90 ? "text-[#16A34A]" : cumpl >= 70 ? "text-[#CA8A04]" : "text-[#DC2626]"}`}>
+            <div className="text-[11px] font-bold text-[#041224]">Cumplimiento</div>
+            <div className="text-[9px] text-[#888]">del presupuesto</div>
+            <div className={`text-[10px] font-bold mt-1 ${cumpl >= 90 ? "text-[#16A34A]" : cumpl >= 70 ? "text-[#CA8A04]" : "text-[#DC2626]"}`}>
               {cumpl >= 90 ? "Meta alcanzada ✓" : cumpl >= 70 ? "Cerca de meta" : "Por debajo de meta"}
             </div>
           </div>
         </div>
 
         {/* Crecimiento */}
-        <div className="bg-white rounded-lg shadow-[0_1px_6px_rgba(0,0,0,0.06)] border border-[#EAEAEA] p-3 flex items-center gap-3">
-          <div className={`w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 ${crec >= 0 ? "bg-[#F0FDF4]" : "bg-[#FEF2F2]"}`}>
-            <span className={`text-xl font-black ${crec >= 0 ? "text-[#16A34A]" : "text-[#DC2626]"}`}>{crec >= 0 ? "↑" : "↓"}</span>
+        <div className="bg-white rounded-xl shadow-[0_2px_12px_rgba(0,0,0,0.06)] border border-[#E5E5E5] p-4 flex items-center gap-4">
+          <div className={`w-14 h-14 rounded-xl flex items-center justify-center flex-shrink-0 ${crec >= 0 ? "bg-[#F0FDF4]" : "bg-[#FEF2F2]"}`}>
+            <span className={`text-2xl font-black ${crec >= 0 ? "text-[#16A34A]" : "text-[#DC2626]"}`}>{crec >= 0 ? "↑" : "↓"}</span>
           </div>
           <div>
-            <div className={`text-2xl font-black leading-none ${crec >= 0 ? "text-[#16A34A]" : "text-[#DC2626]"}`}>{crec >= 0 ? "+" : ""}{crec}%</div>
-            <div className="text-[9px] text-[#888] font-medium mt-0.5">vs Año Anterior *</div>
+            <div className={`text-3xl font-black leading-none ${crec >= 0 ? "text-[#16A34A]" : "text-[#DC2626]"}`}>{crec >= 0 ? "+" : ""}{crec}%</div>
+            <div className="text-[10px] text-[#888] font-medium mt-1">vs Año Anterior</div>
           </div>
         </div>
 
         {/* Tipo de cambio */}
-        <div className="bg-[#041224] rounded-lg shadow-[0_1px_6px_rgba(0,0,0,0.15)] p-3 text-white">
-          <div className="text-[8px] text-white/50 uppercase font-bold tracking-wider mb-2">Tipo de Cambio</div>
-          {fxLoading ? <div className="text-xs text-white/30 animate-pulse">Actualizando…</div> : (
-            <div className="space-y-1.5">
+        <div className="bg-[#041224] rounded-xl shadow-[0_2px_12px_rgba(0,0,0,0.2)] p-4 text-white">
+          <div className="text-[9px] text-white/50 uppercase font-bold tracking-wider mb-2">Tipo de Cambio</div>
+          {fxLoading ? <div className="text-sm text-white/30 animate-pulse">Actualizando…</div> : (
+            <div className="space-y-2">
               <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <span className="text-[9px] font-medium text-white/60">Dólar</span>
-                </div>
-                <span className="text-lg font-black">${fx.usd.toFixed(2)}</span>
+                <span className="text-[10px] font-medium text-white/60">Dólar USD</span>
+                <span className="text-xl font-black">${fx.usd.toFixed(2)}</span>
               </div>
               <div className="h-px bg-white/10" />
               <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <span className="text-[9px] font-medium text-white/60">Peso Dominicano</span>
-                </div>
-                <span className="text-lg font-black">${fx.dop.toFixed(2)}</span>
+                <span className="text-[10px] font-medium text-white/60">Peso Dominicano</span>
+                <span className="text-xl font-black">${fx.dop.toFixed(2)}</span>
               </div>
             </div>
           )}
-          {fx.fechaActualizacion && <div className="text-[7px] text-white/30 mt-2 text-right">{new Date(fx.fechaActualizacion).toLocaleString("es-MX", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })}</div>}
+          {fx.fechaActualizacion && <div className="text-[8px] text-white/30 mt-2 text-right">{new Date(fx.fechaActualizacion).toLocaleString("es-MX", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })}</div>}
         </div>
 
         {/* Proyección */}
-        <div className={`rounded-lg shadow-[0_1px_6px_rgba(0,0,0,0.06)] border p-3 ${forecast >= totalPpto ? "bg-[#F0FDF4] border-[#16A34A]/20" : "bg-[#FEF2F2] border-[#DC2626]/20"}`}>
-          <div className="text-[8px] text-[#999] uppercase font-bold tracking-wider">Proyección al cierre</div>
-          <div className={`text-3xl font-black leading-none mt-1 ${forecast >= totalPpto ? "text-[#16A34A]" : "text-[#DC2626]"}`}>
+        <div className={`rounded-xl shadow-[0_2px_12px_rgba(0,0,0,0.06)] border p-4 ${forecast >= totalPpto ? "bg-[#F0FDF4] border-[#16A34A]/30" : "bg-[#FEF2F2] border-[#DC2626]/30"}`}>
+          <div className="text-[9px] text-[#888] uppercase font-bold tracking-wider">Proyección al cierre</div>
+          <div className={`text-4xl font-black leading-none mt-1 ${forecast >= totalPpto ? "text-[#16A34A]" : "text-[#DC2626]"}`}>
             ${(forecast / 1e6).toFixed(1)}M
           </div>
-          <div className="flex items-center gap-1.5 mt-1.5">
-            <div className="flex-1 h-1.5 bg-[#E5E7E9] rounded-full overflow-hidden">
+          <div className="flex items-center gap-2 mt-2">
+            <div className="flex-1 h-2 bg-[#E5E7E9] rounded-full overflow-hidden">
               <div className={`h-full rounded-full transition-all ${forecast >= totalPpto ? "bg-[#16A34A]" : "bg-[#DC2626]"}`} style={{ width: `${Math.min(100, (dp / dim) * 100)}%` }} />
             </div>
-            <span className="text-[8px] text-[#999] font-medium">{dp}/{dim}</span>
+            <span className="text-[9px] text-[#888] font-medium">{dp}/{dim} días</span>
           </div>
-          <div className="text-[7px] text-[#CCC] mt-0.5">Proyección lineal</div>
         </div>
       </div>
 
-      {/* ═══ ROW 3: Bar chart — larger and more prominent ═══ */}
-      <div className="bg-white rounded-lg shadow-[0_2px_12px_rgba(0,0,0,0.06)] border border-[#EAEAEA] px-4 py-3 flex-1 min-h-0 flex flex-col overflow-hidden">
-        <div className="flex items-center gap-3 mb-2 flex-shrink-0">
-          <span className="text-[12px] font-bold text-[#041224]">Prima neta por línea</span>
-          <div className="flex items-center gap-2 ml-auto">
-            <div className="flex items-center gap-1">
-              <div className="w-3 h-3 bg-[#041224] rounded-sm" /><span className="text-[10px] text-[#666]">Prima cobrada</span>
+      {/* ═══ CHART — BIGGER AND MORE PROMINENT ═══ */}
+      <div className="bg-white rounded-xl shadow-[0_4px_20px_rgba(0,0,0,0.08)] border border-[#E5E5E5] px-5 py-4 flex-1 min-h-0 flex flex-col overflow-hidden">
+        <div className="flex items-center gap-4 mb-3 flex-shrink-0">
+          <span className="text-sm font-bold text-[#041224]">Prima neta por línea</span>
+          <div className="flex items-center gap-3 ml-auto">
+            <div className="flex items-center gap-1.5">
+              <div className="w-4 h-4 bg-[#041224] rounded" /><span className="text-[11px] text-[#666] font-medium">Prima cobrada</span>
             </div>
             {chartData.some(d => d.ppto > 0) && (
-              <div className="flex items-center gap-1">
-                <div className="w-3 h-3 bg-[#CCD1D3] rounded-sm" /><span className="text-[10px] text-[#666]">Presupuesto</span>
+              <div className="flex items-center gap-1.5">
+                <div className="w-4 h-4 bg-[#CCD1D3] rounded" /><span className="text-[11px] text-[#666] font-medium">Presupuesto</span>
               </div>
             )}
           </div>
         </div>
-        <div className="flex-1" style={{ minHeight: 200, height: "100%" }}>
+        <div className="flex-1" style={{ minHeight: 220 }}>
           {mounted && chartData.length > 0 && (
             <ResponsiveContainer width="100%" height="100%" debounce={50}>
-              <BarChart layout="vertical" data={chartData} margin={{ top: 8, right: 80, left: 10, bottom: 8 }} barGap={6} barSize={24}>
+              <BarChart layout="vertical" data={chartData} margin={{ top: 10, right: 100, left: 20, bottom: 10 }} barGap={8} barSize={32}>
                 <CartesianGrid horizontal vertical={false} stroke="#F0F0F0" />
-                <XAxis type="number" domain={[0, "auto"]} tickFormatter={(v: unknown) => `$${v}M`} fontSize={10} tick={{ fill: "#999" }} axisLine={false} tickLine={false} />
-                <YAxis type="category" dataKey="nombre" width={140} fontSize={11} tick={{ fill: "#111", fontWeight: 700 }} axisLine={false} tickLine={false} />
-                <Bar dataKey="pn" radius={[0, 6, 6, 0]}>
-                  {chartData.map((e, i) => <Cell key={i} fill="#041224" opacity={!selected || e.nombre === selected ? 1 : 0.15} />)}
-                  <LabelList dataKey="pn" position="right" formatter={(v: unknown) => `$${v}M`} fontSize={11} fill="#333" fontWeight={700} offset={8} />
+                <XAxis type="number" domain={[0, "auto"]} tickFormatter={(v: unknown) => `$${v}M`} fontSize={12} tick={{ fill: "#888" }} axisLine={false} tickLine={false} />
+                <YAxis type="category" dataKey="nombre" width={150} fontSize={13} tick={{ fill: "#111", fontWeight: 700 }} axisLine={false} tickLine={false} />
+                <Bar dataKey="pn" fill="#041224" radius={[0, 8, 8, 0]}>
+                  <LabelList dataKey="pn" position="right" formatter={(v: unknown) => `$${v}M`} fontSize={13} fill="#041224" fontWeight={800} offset={12} />
                 </Bar>
                 {chartData.some(d => d.ppto > 0) && (
-                  <Bar dataKey="ppto" fill="#CCD1D3" radius={[0, 6, 6, 0]}>
-                    <LabelList dataKey="ppto" position="right" formatter={(v: unknown) => Number(v) > 0 ? `$${v}M` : ""} fontSize={9} fill="#888" offset={8} />
+                  <Bar dataKey="ppto" fill="#CCD1D3" radius={[0, 8, 8, 0]}>
+                    <LabelList dataKey="ppto" position="right" formatter={(v: unknown) => Number(v) > 0 ? `$${v}M` : ""} fontSize={11} fill="#888" offset={12} />
                   </Bar>
                 )}
               </BarChart>
