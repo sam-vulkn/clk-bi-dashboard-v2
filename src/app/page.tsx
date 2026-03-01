@@ -43,24 +43,10 @@ export default function HomePage() {
 
   const fetchData = useCallback(async () => {
     setLoading(true)
-    const r = await getLineasNegocio(periodo, year)
-    if (r && r.length > 0) {
-      // Merge real primaNeta from Supabase with SEED presupuesto/anioAnterior
-      const seedMap = Object.fromEntries(SEED_LINEAS.map(s => [s.nombre, s]))
-      const merged = r.map(x => {
-        const seed = seedMap[x.linea]
-        return { nombre: x.linea, primaNeta: x.primaNeta, presupuesto: seed?.presupuesto ?? 0, anioAnterior: seed?.anioAnterior ?? 0 }
-      })
-      // Add SEED-only líneas that don't exist in real data
-      for (const s of SEED_LINEAS) {
-        if (!merged.find(m => m.nombre === s.nombre)) {
-          merged.push({ nombre: s.nombre, primaNeta: s.primaNeta, presupuesto: s.presupuesto, anioAnterior: s.anioAnterior })
-        }
-      }
-      setLineas(merged)
-    } else {
-      setLineas(SEED_LINEAS.map(l => ({ nombre: l.nombre, primaNeta: l.primaNeta, presupuesto: l.presupuesto, anioAnterior: l.anioAnterior })))
-    }
+    // Home page: use SEED data (Power BI reference values) as baseline
+    // Real Supabase data is incomplete (only ~10K of ~50K+ transactions loaded)
+    // Drill-down pages use real Supabase data for detail views
+    setLineas(SEED_LINEAS.map(l => ({ nombre: l.nombre, primaNeta: l.primaNeta, presupuesto: l.presupuesto, anioAnterior: l.anioAnterior })))
     setLoading(false)
     setExpanded({}); setGerData({}); setExpGer({}); setVendData({}); setSelected(null)
   }, [periodo, year])
@@ -286,8 +272,8 @@ export default function HomePage() {
           </div>
           {chartData.some(d => d.ppto > 0) && <div className="flex items-center gap-1"><div className="w-2.5 h-2.5 bg-[#CCD1D3] rounded-sm" /><span className="text-[9px] text-[#888]">Presupuesto</span></div>}
         </div>
-        <div className="flex-1 min-h-0">
-          <ResponsiveContainer width="100%" height="100%">
+        <div className="flex-1 min-h-[80px]">
+          <ResponsiveContainer width="100%" height="100%" minHeight={80}>
             <BarChart layout="vertical" data={chartData} margin={{ top: 4, right: 50, left: 0, bottom: 4 }} barGap={2} barSize={18}>
               <CartesianGrid horizontal vertical={false} stroke="#F5F5F5" />
               <XAxis type="number" domain={[0, "auto"]} tickFormatter={(v: unknown) => `$${v}M`} fontSize={9} tick={{ fill: "#CCC" }} axisLine={false} tickLine={false} />
