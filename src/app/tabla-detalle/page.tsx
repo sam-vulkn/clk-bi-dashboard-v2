@@ -106,27 +106,39 @@ export default function TablaDetallePage() {
   useEffect(() => { getLastDataDate().then(d => setLastDataDate(d)) }, [])
   const periodo = MESES[month] ?? 2
 
-  // Load líneas
+  // Load líneas - ALWAYS use SEED as stable base (Power BI reference)
+  // This prevents flicker when Supabase returns partial data
   useEffect(() => {
     let cancelled = false
-    setLoading(true)
-    setDrillLevel("linea"); setCrumbs([]); setSel({})
-
+    
+    // Reset drill state but keep lineas as SEED to prevent flicker
+    setDrillLevel("linea")
+    setCrumbs([])
+    setSel({})
+    setLineas(SEED) // Always show SEED immediately
+    setLoading(false) // Don't show loading since SEED is always available
+    
+    // Optionally try to get real data and merge with SEED
+    // Only update if we get ALL 5 líneas
     const load = async () => {
       try {
         const result = await getLineasNegocio(periodo, year)
-        if (!cancelled) {
-          if (result && result.length > 0) {
-            setLineas(result.map(r => ({ linea: r.linea, primaNeta: r.primaNeta, presupuesto: 0, diferencia: 0, pctDifPpto: 0, pnAnioAnt: 0, difYoY: 0, pctDifYoY: 0, pendiente: 0 })))
-          } else { setLineas(SEED) }
-          setLoading(false)
+        if (!cancelled && result && result.length >= 5) {
+          // Only use real data if it has all 5 líneas
+          setLineas(result.map(r => {
+            const seed = SEED.find(s => s.linea === r.linea)
+            return seed ? { ...seed, primaNeta: r.primaNeta } : {
+              linea: r.linea, primaNeta: r.primaNeta, presupuesto: 0, diferencia: 0,
+              pctDifPpto: 0, pnAnioAnt: 0, difYoY: 0, pctDifYoY: 0, pendiente: 0
+            }
+          }))
         }
-      } catch { if (!cancelled) { setLineas(SEED); setLoading(false) } }
+      } catch { /* SEED is already showing, no action needed */ }
     }
-    const ks = setTimeout(() => { if (!cancelled) { cancelled = true; setLineas(SEED); setLoading(false) } }, 3000)
+    
     load()
 
-    // Load rankings in parallel
+    // Load rankings in parallel (these don't affect main table stability)
     getRankedVendedores(periodo, year).then(v => {
       if (v && v.length > 0) {
         setTopVendedores(v.slice(0, 5))
@@ -140,7 +152,7 @@ export default function TablaDetallePage() {
       }
     })
 
-    return () => { cancelled = true; clearTimeout(ks) }
+    return () => { cancelled = true }
   }, [periodo, year])
 
   // Generic drill function
