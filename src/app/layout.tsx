@@ -2,7 +2,6 @@ import type { Metadata } from "next"
 import { Lato } from "next/font/google"
 import "./globals.css"
 import { AuthProvider } from "@/lib/auth-context"
-import { Sidebar } from "@/components/sidebar"
 
 const lato = Lato({ subsets: ["latin"], weight: ["300", "400", "700", "900"] })
 
@@ -16,12 +15,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="es">
       <body className={lato.className}>
         <AuthProvider>
-          <div className="flex min-h-screen">
-            <Sidebar />
-            <main className="flex-1 lg:ml-[180px] min-h-screen bg-[#F5F5F5]">
-              <div className="p-3 lg:p-4">{children}</div>
-            </main>
-          </div>
+          {/* NO SIDEBAR - Full width like Power BI */}
+          <main className="min-h-screen bg-[#F5F5F5]">
+            {children}
+          </main>
         </AuthProvider>
       </body>
     </html>
