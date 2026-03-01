@@ -1,14 +1,16 @@
 "use client"
 
 import { useEffect, useRef, useState } from "react"
+import Link from "next/link"
 
 interface GaugeProps {
   value: number
   prevYear?: number
   budget?: number
+  clickable?: boolean
 }
 
-export function Gauge({ value, prevYear = 88.9, budget = 129.5 }: GaugeProps) {
+export function Gauge({ value, prevYear = 88.9, budget = 129.5, clickable = true }: GaugeProps) {
   const [anim, setAnim] = useState(0)
   const raf = useRef(0)
 
@@ -31,8 +33,8 @@ export function Gauge({ value, prevYear = 88.9, budget = 129.5 }: GaugeProps) {
     return () => cancelAnimationFrame(raf.current)
   }, [pct])
 
-  const cx = 180, cy = 160
-  const ro = 130, ri = 90
+  const cx = 200, cy = 170
+  const ro = 140, ri = 95
   const startA = 150, sweepA = 240
 
   const toXY = (deg: number, r: number) => {
@@ -52,23 +54,15 @@ export function Gauge({ value, prevYear = 88.9, budget = 129.5 }: GaugeProps) {
   // Needle
   const na = p2a(anim)
   const nRad = (na * Math.PI) / 180
-  const nLen = ro + 8
+  const nLen = ro + 10
   const tip = { x: cx + nLen * Math.cos(nRad), y: cy + nLen * Math.sin(nRad) }
-  const bw = 4
+  const bw = 5
   const b1 = { x: cx + bw * Math.cos(nRad + Math.PI / 2), y: cy + bw * Math.sin(nRad + Math.PI / 2) }
   const b2 = { x: cx - bw * Math.cos(nRad + Math.PI / 2), y: cy - bw * Math.sin(nRad + Math.PI / 2) }
 
-  // Scale labels at key points
-  const scaleLabels = [
-    { pct: 0, label: "$0M" },
-    { pct: pyPct, label: `$${prevYear}M`, color: "#991B1B" },
-    { pct: budPct, label: `$${budget}M`, color: "#166534" },
-    { pct: 1, label: `$${max}M` },
-  ]
-
-  return (
-    <div className="w-full h-full flex flex-col items-center justify-center p-2">
-      <svg viewBox="0 0 360 220" className="w-full" preserveAspectRatio="xMidYMid meet">
+  const GaugeContent = (
+    <div className={`w-full h-full flex flex-col items-center justify-center ${clickable ? 'cursor-pointer hover:opacity-90 transition-opacity' : ''}`}>
+      <svg viewBox="0 0 400 260" className="w-full max-w-[400px]" preserveAspectRatio="xMidYMid meet">
         <defs>
           <linearGradient id="redZone" x1="0%" y1="0%" x2="100%" y2="0%">
             <stop offset="0%" stopColor="#DC2626" />
@@ -82,51 +76,90 @@ export function Gauge({ value, prevYear = 88.9, budget = 129.5 }: GaugeProps) {
             <stop offset="0%" stopColor="#10B981" />
             <stop offset="100%" stopColor="#34D399" />
           </linearGradient>
-          <filter id="shadow"><feDropShadow dx="0" dy="2" stdDeviation="3" floodOpacity="0.2" /></filter>
+          <filter id="needleShadow"><feDropShadow dx="1" dy="2" stdDeviation="2" floodOpacity="0.3" /></filter>
+          <filter id="textGlow"><feDropShadow dx="0" dy="1" stdDeviation="1" floodOpacity="0.1" /></filter>
         </defs>
 
         {/* Background track */}
-        <path d={descArc(startA, startA + sweepA, ro + 2, ri - 2)} fill="#E5E7EB" />
+        <path d={descArc(startA, startA + sweepA, ro + 3, ri - 3)} fill="#E5E7EB" />
 
-        {/* Colored zones - VIBRANT */}
+        {/* Colored zones */}
         <path d={descArc(startA, z1e, ro, ri)} fill="url(#redZone)" />
         <path d={descArc(z1e, z2e, ro, ri)} fill="url(#yellowZone)" />
         <path d={descArc(z2e, startA + sweepA, ro, ri)} fill="url(#greenZone)" />
 
-        {/* Zone markers - white lines */}
-        {[pyPct, budPct].map((pctVal, i) => {
-          const angle = p2a(pctVal)
-          const o = toXY(angle, ro + 3), inner = toXY(angle, ri - 3)
-          return <line key={i} x1={o.x} y1={o.y} x2={inner.x} y2={inner.y} stroke="white" strokeWidth="3" />
-        })}
-
-        {/* Scale labels outside the arc */}
-        {scaleLabels.map((s, i) => {
-          const angle = p2a(s.pct)
-          const pos = toXY(angle, ro + 18)
+        {/* Zone labels with values */}
+        {/* Año Anterior marker */}
+        {(() => {
+          const angle = p2a(pyPct)
+          const o = toXY(angle, ro + 4), inner = toXY(angle, ri - 4)
+          const labelPos = toXY(angle, ro + 22)
           return (
-            <text key={i} x={pos.x} y={pos.y} fontSize="11" fill={s.color || "#6B7280"} 
-              textAnchor="middle" dominantBaseline="middle" fontWeight="700">
-              {s.label}
-            </text>
+            <g>
+              <line x1={o.x} y1={o.y} x2={inner.x} y2={inner.y} stroke="white" strokeWidth="3" />
+              <text x={labelPos.x} y={labelPos.y} fontSize="11" fill="#991B1B" textAnchor="middle" fontWeight="700">
+                ${prevYear}M
+              </text>
+            </g>
           )
-        })}
+        })()}
+        
+        {/* Presupuesto marker */}
+        {(() => {
+          const angle = p2a(budPct)
+          const o = toXY(angle, ro + 4), inner = toXY(angle, ri - 4)
+          const labelPos = toXY(angle, ro + 22)
+          return (
+            <g>
+              <line x1={o.x} y1={o.y} x2={inner.x} y2={inner.y} stroke="white" strokeWidth="3" />
+              <text x={labelPos.x} y={labelPos.y} fontSize="11" fill="#166534" textAnchor="middle" fontWeight="700">
+                ${budget}M
+              </text>
+            </g>
+          )
+        })()}
+
+        {/* Scale markers */}
+        <text x={toXY(startA, ro + 18).x} y={toXY(startA, ro + 18).y} fontSize="10" fill="#9CA3AF" textAnchor="middle">$0M</text>
+        <text x={toXY(startA + sweepA, ro + 18).x} y={toXY(startA + sweepA, ro + 18).y} fontSize="10" fill="#9CA3AF" textAnchor="middle">${max}M</text>
 
         {/* Needle */}
-        <polygon points={`${tip.x},${tip.y} ${b1.x},${b1.y} ${b2.x},${b2.y}`} fill="#1F2937" filter="url(#shadow)" />
-        <circle cx={cx} cy={cy} r={10} fill="#374151" />
-        <circle cx={cx} cy={cy} r={5} fill="#6B7280" />
+        <polygon points={`${tip.x},${tip.y} ${b1.x},${b1.y} ${b2.x},${b2.y}`} fill="#1F2937" filter="url(#needleShadow)" />
+        <circle cx={cx} cy={cy} r={12} fill="#374151" />
+        <circle cx={cx} cy={cy} r={6} fill="#6B7280" />
 
-        {/* Center value - BIG and BOLD */}
-        <text x={cx} y={cy - 20} fontSize="48" fill="#111827" textAnchor="middle" fontWeight="900" fontFamily="system-ui">
+        {/* ═══ CENTER VALUE - LARGE & PROMINENT ═══ */}
+        <text x={cx} y={cy - 25} fontSize="56" fill="#111827" textAnchor="middle" fontWeight="900" fontFamily="system-ui" filter="url(#textGlow)">
           ${value.toFixed(1)}M
         </text>
 
-        {/* Budget text - PROPERLY SPACED */}
-        <text x={cx} y={cy + 15} fontSize="14" fill="#6B7280" textAnchor="middle" fontFamily="system-ui">
-          de <tspan fill="#111827" fontWeight="700">${budget}M</tspan> presupuesto
+        {/* Budget info - elegant layout */}
+        <text x={cx} y={cy + 12} fontSize="15" fill="#6B7280" textAnchor="middle" fontFamily="system-ui">
+          de <tspan fill="#111827" fontWeight="800" fontSize="17">${budget}M</tspan> presupuesto
         </text>
+        
+        {/* Zone legend at bottom */}
+        <g transform="translate(200, 245)">
+          <rect x="-120" y="-8" width="16" height="10" rx="2" fill="#EF4444" />
+          <text x="-100" y="0" fontSize="9" fill="#666" dominantBaseline="middle">Año Ant.</text>
+          <rect x="-40" y="-8" width="16" height="10" rx="2" fill="#FBBF24" />
+          <text x="-20" y="0" fontSize="9" fill="#666" dominantBaseline="middle">En Meta</text>
+          <rect x="40" y="-8" width="16" height="10" rx="2" fill="#34D399" />
+          <text x="60" y="0" fontSize="9" fill="#666" dominantBaseline="middle">Arriba</text>
+        </g>
       </svg>
+      
+      {clickable && (
+        <div className="text-[10px] text-gray-400 mt-1 text-center">
+          Click para ver detalle →
+        </div>
+      )}
     </div>
   )
+
+  if (clickable) {
+    return <Link href="/tabla-detalle" className="block w-full h-full">{GaugeContent}</Link>
+  }
+  
+  return GaugeContent
 }
