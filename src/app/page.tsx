@@ -31,7 +31,9 @@ export default function HomePage() {
   useEffect(() => { 
     setMounted(true)
     document.title = "Tacómetro | CLK BI Dashboard"
-    setTimeout(() => setChartReady(true), 150)
+    // Delay chart render to ensure container has dimensions
+    const timer = setTimeout(() => setChartReady(true), 300)
+    return () => clearTimeout(timer)
   }, [])
   
   useEffect(() => { getTipoCambio().then(r => { if (r) setFx(r) }) }, [])
@@ -210,9 +212,9 @@ export default function HomePage() {
             </div>
           </div>
         </div>
-        <div ref={chartRef} style={{ height: 220 }}>
-          {chartReady && (
-            <ResponsiveContainer width="100%" height="100%">
+        <div ref={chartRef} className="w-full" style={{ height: 220, minHeight: 220 }}>
+          {chartReady && chartData.length > 0 && (
+            <ResponsiveContainer width="100%" height={220}>
               <BarChart layout="vertical" data={chartData} margin={{ top: 5, right: 90, left: 10, bottom: 5 }} barGap={4}>
                 <XAxis type="number" hide />
                 <YAxis type="category" dataKey="nombre" width={130} tick={{ fontSize: 12, fill: '#374151' }} axisLine={false} tickLine={false} />
