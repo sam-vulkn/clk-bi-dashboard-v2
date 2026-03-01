@@ -133,11 +133,11 @@ export default function HomePage() {
           <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden h-full flex flex-col">
             <table className="w-full text-sm">
               <thead>
-                <tr className="bg-[#041224] text-white">
-                  <th className="text-left px-3 py-2.5 font-semibold text-xs">Línea de Negocio</th>
-                  <th className="text-right px-3 py-2.5 font-semibold text-xs">Prima Neta</th>
-                  <th className="text-right px-3 py-2.5 font-semibold text-xs">Año Anterior</th>
-                  <th className="text-right px-3 py-2.5 font-semibold text-xs">Presupuesto</th>
+                <tr className="bg-[#041224] text-white border-b-[3px] border-b-[#E62800]">
+                  <th className="text-left px-3 py-2 font-bold text-[11px] uppercase tracking-wide">Línea de Negocio</th>
+                  <th className="text-right px-3 py-2 font-bold text-[11px] uppercase tracking-wide">Prima Neta</th>
+                  <th className="text-right px-3 py-2 font-bold text-[11px] uppercase tracking-wide">Año Anterior</th>
+                  <th className="text-right px-3 py-2 font-bold text-[11px] uppercase tracking-wide">Presupuesto</th>
                 </tr>
               </thead>
               <tbody>

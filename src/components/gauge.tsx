@@ -33,9 +33,8 @@ export function Gauge({ value, prevYear = 88.9, budget = 129.5, clickable = true
     return () => cancelAnimationFrame(raf.current)
   }, [pct])
 
-  // LARGER gauge dimensions
-  const cx = 200, cy = 180
-  const ro = 160, ri = 110 // Bigger arc (was 140/95)
+  const cx = 200, cy = 175
+  const ro = 150, ri = 100
   const startA = 150, sweepA = 240
 
   const toXY = (deg: number, r: number) => {
@@ -55,104 +54,99 @@ export function Gauge({ value, prevYear = 88.9, budget = 129.5, clickable = true
   // Needle
   const na = p2a(anim)
   const nRad = (na * Math.PI) / 180
-  const nLen = ro + 12
+  const nLen = ro + 10
   const tip = { x: cx + nLen * Math.cos(nRad), y: cy + nLen * Math.sin(nRad) }
-  const bw = 6
+  const bw = 5
   const b1 = { x: cx + bw * Math.cos(nRad + Math.PI / 2), y: cy + bw * Math.sin(nRad + Math.PI / 2) }
   const b2 = { x: cx - bw * Math.cos(nRad + Math.PI / 2), y: cy - bw * Math.sin(nRad + Math.PI / 2) }
 
+  // SCALE MARKERS - Like Power BI with multiple values around arc
+  const scaleValues = [0, 38, 75, Math.round(prevYear), 113, Math.round(budget), max]
+  const uniqueScales = Array.from(new Set(scaleValues)).sort((a, b) => a - b)
+
   const GaugeContent = (
-    <div className={`w-full h-full flex flex-col items-center justify-center ${clickable ? 'cursor-pointer hover:scale-[1.02] transition-transform' : ''}`}>
-      <svg viewBox="0 0 400 280" className="w-full" preserveAspectRatio="xMidYMid meet">
+    <div className={`w-full h-full flex flex-col items-center justify-center ${clickable ? 'cursor-pointer hover:scale-[1.01] transition-transform' : ''}`}>
+      <svg viewBox="0 0 400 270" className="w-full" preserveAspectRatio="xMidYMid meet">
         <defs>
-          {/* Gradients with better textures */}
           <linearGradient id="redZone" x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" stopColor="#DC2626" />
-            <stop offset="50%" stopColor="#EF4444" />
-            <stop offset="100%" stopColor="#F87171" />
+            <stop offset="0%" stopColor="#C53030" />
+            <stop offset="100%" stopColor="#F56565" />
           </linearGradient>
           <linearGradient id="yellowZone" x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" stopColor="#D97706" />
-            <stop offset="50%" stopColor="#F59E0B" />
-            <stop offset="100%" stopColor="#FBBF24" />
+            <stop offset="0%" stopColor="#C05621" />
+            <stop offset="100%" stopColor="#ECC94B" />
           </linearGradient>
           <linearGradient id="greenZone" x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" stopColor="#059669" />
-            <stop offset="50%" stopColor="#10B981" />
-            <stop offset="100%" stopColor="#34D399" />
+            <stop offset="0%" stopColor="#276749" />
+            <stop offset="100%" stopColor="#48BB78" />
           </linearGradient>
           <filter id="arcShadow">
-            <feDropShadow dx="0" dy="3" stdDeviation="4" floodOpacity="0.2" />
+            <feDropShadow dx="0" dy="2" stdDeviation="3" floodOpacity="0.15" />
           </filter>
           <filter id="needleShadow">
-            <feDropShadow dx="1" dy="3" stdDeviation="3" floodOpacity="0.35" />
+            <feDropShadow dx="1" dy="2" stdDeviation="2" floodOpacity="0.3" />
           </filter>
         </defs>
 
-        {/* Background track with shadow */}
-        <path d={descArc(startA, startA + sweepA, ro + 4, ri - 4)} fill="#E0E0E0" filter="url(#arcShadow)" />
+        {/* Background track */}
+        <path d={descArc(startA, startA + sweepA, ro + 3, ri - 3)} fill="#E2E8F0" filter="url(#arcShadow)" />
 
-        {/* Colored zones - PROMINENT */}
+        {/* Colored zones - THICK and PROMINENT */}
         <path d={descArc(startA, z1e, ro, ri)} fill="url(#redZone)" />
         <path d={descArc(z1e, z2e, ro, ri)} fill="url(#yellowZone)" />
         <path d={descArc(z2e, startA + sweepA, ro, ri)} fill="url(#greenZone)" />
 
-        {/* Inner highlight for depth */}
-        <path d={descArc(startA, startA + sweepA, ri + 8, ri)} fill="rgba(255,255,255,0.15)" />
+        {/* Inner highlight */}
+        <path d={descArc(startA, startA + sweepA, ri + 6, ri)} fill="rgba(255,255,255,0.2)" />
 
-        {/* Zone markers with labels */}
-        {(() => {
-          const angle = p2a(pyPct)
-          const o = toXY(angle, ro + 5), inner = toXY(angle, ri - 5)
-          const labelPos = toXY(angle, ro + 25)
+        {/* SCALE LABELS around arc - Like Power BI */}
+        {uniqueScales.map((val, i) => {
+          const pctVal = (val - min) / (max - min)
+          const angle = p2a(pctVal)
+          const pos = toXY(angle, ro + 22)
+          const isKey = val === Math.round(prevYear) || val === Math.round(budget)
           return (
-            <g>
-              <line x1={o.x} y1={o.y} x2={inner.x} y2={inner.y} stroke="white" strokeWidth="4" />
-              <text x={labelPos.x} y={labelPos.y} fontSize="12" fill="#B91C1C" textAnchor="middle" fontWeight="800">
-                ${prevYear}M
+            <g key={i}>
+              {/* Tick mark */}
+              <line 
+                x1={toXY(angle, ro + 2).x} y1={toXY(angle, ro + 2).y}
+                x2={toXY(angle, ri - 2).x} y2={toXY(angle, ri - 2).y}
+                stroke={isKey ? "white" : "#CBD5E0"} 
+                strokeWidth={isKey ? 3 : 1} 
+              />
+              {/* Label */}
+              <text 
+                x={pos.x} y={pos.y} 
+                fontSize={isKey ? "11" : "9"} 
+                fill={val === Math.round(prevYear) ? "#C53030" : val === Math.round(budget) ? "#276749" : "#718096"}
+                textAnchor="middle" 
+                fontWeight={isKey ? "800" : "600"}
+              >
+                ${val}M
               </text>
             </g>
           )
-        })()}
-        
-        {(() => {
-          const angle = p2a(budPct)
-          const o = toXY(angle, ro + 5), inner = toXY(angle, ri - 5)
-          const labelPos = toXY(angle, ro + 25)
-          return (
-            <g>
-              <line x1={o.x} y1={o.y} x2={inner.x} y2={inner.y} stroke="white" strokeWidth="4" />
-              <text x={labelPos.x} y={labelPos.y} fontSize="12" fill="#166534" textAnchor="middle" fontWeight="800">
-                ${budget}M
-              </text>
-            </g>
-          )
-        })()}
+        })}
 
-        {/* Scale markers */}
-        <text x={toXY(startA, ro + 20).x} y={toXY(startA, ro + 20).y} fontSize="11" fill="#9CA3AF" textAnchor="middle" fontWeight="600">$0M</text>
-        <text x={toXY(startA + sweepA, ro + 20).x} y={toXY(startA + sweepA, ro + 20).y} fontSize="11" fill="#9CA3AF" textAnchor="middle" fontWeight="600">${max}M</text>
+        {/* Needle */}
+        <polygon points={`${tip.x},${tip.y} ${b1.x},${b1.y} ${b2.x},${b2.y}`} fill="#2D3748" filter="url(#needleShadow)" />
+        <circle cx={cx} cy={cy} r={12} fill="#4A5568" />
+        <circle cx={cx} cy={cy} r={6} fill="#718096" />
 
-        {/* Needle - prominent */}
-        <polygon points={`${tip.x},${tip.y} ${b1.x},${b1.y} ${b2.x},${b2.y}`} fill="#1F2937" filter="url(#needleShadow)" />
-        <circle cx={cx} cy={cy} r={14} fill="#374151" />
-        <circle cx={cx} cy={cy} r={7} fill="#6B7280" />
-        <circle cx={cx} cy={cy} r={3} fill="#9CA3AF" />
-
-        {/* ═══ CENTER VALUE - LARGE, BOLD, WELL SPACED ═══ */}
-        <text x={cx} y={cy - 35} fontSize="64" fill="#111827" textAnchor="middle" fontWeight="900" fontFamily="system-ui">
+        {/* CENTER VALUE - LARGE */}
+        <text x={cx} y={cy - 30} fontSize="58" fill="#1A202C" textAnchor="middle" fontWeight="900" fontFamily="system-ui">
           ${value.toFixed(1)}M
         </text>
 
-        {/* Budget text - SEPARATE LINE, NOT OVERLAPPING */}
-        <text x={cx} y={cy + 5} fontSize="16" fill="#6B7280" textAnchor="middle" fontFamily="system-ui">
-          de <tspan fill="#111827" fontWeight="800" fontSize="18">${budget}M</tspan> presupuesto
+        {/* Budget text - CLEAN */}
+        <text x={cx} y={cy + 8} fontSize="14" fill="#718096" textAnchor="middle" fontFamily="system-ui">
+          de <tspan fill="#1A202C" fontWeight="800" fontSize="16">${budget}M</tspan> presupuesto
         </text>
       </svg>
       
       {clickable && (
-        <div className="text-xs text-gray-500 mt-0 text-center font-medium">
-          Click para ver detalle →
+        <div className="text-[10px] text-gray-500 text-center">
+          Click para detalle →
         </div>
       )}
     </div>

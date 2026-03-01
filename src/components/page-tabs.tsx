@@ -36,10 +36,10 @@ export function PageTabs({ alertCount }: PageTabsProps) {
             <Link
               href={tab.href}
               className={cn(
-                "px-3 py-2.5 text-[13px] transition-colors relative -mb-px whitespace-nowrap flex items-center gap-1",
+                "px-2.5 py-2 text-[12px] transition-colors relative -mb-px whitespace-nowrap flex items-center gap-1",
                 active
-                  ? "text-[#041224] font-bold border-b-2 border-[#E62800]"
-                  : "text-[#CCD1D3] hover:text-[#041224]"
+                  ? "text-[#041224] font-bold border-b-[3px] border-[#E62800]"
+                  : "text-[#A0A0A0] hover:text-[#041224]"
               )}
             >
               {tab.label}
